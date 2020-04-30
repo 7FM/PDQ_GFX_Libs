@@ -1,11 +1,26 @@
-PDQ_GFX_Libs with packed font support
-============
-Version with special "packed" font support. Also include TTF2GFX for create custom GFX fonts from TTF.
-Speed up improvement for GFX text drawing about 2-3 times. 
-Allow to create custom fonts with subset of chars (not all ASCII table).
-Special "packing" algorithm for GFX font allow to save 20-50% of space
-
 PDQ_GFX_Libs
+============
+All credits go to https://github.com/XarkLabs/PDQ_GFX_Libs and of course to Adafruit!
+
+Thanks for your work!!!
+
+Main goal of this fork was reducing the size needed for using this awesome library. This was mainly achieved by removing font support.
+
+My Changes:
+* Reformatting... Sorry this makes a comparison & PR really hard x.x
+* More templates => almost no more #defines needed for configuration
+* No more custom font support
+* Extracted FastPin templates to another library (https://github.com/7FM/FastPin.git)
+* Small adjustment to the assembler code to work with -Wl,--relax compiler flag which replaces call (4 cycles) with rcall (3 cycles) where possible => breaks timing if not adjusted
+* Removed some compability functions
+* 1 or 2 code generalizations
+* changed includes this should fix the issue mentioned below (at least for platformio it does just use #include <PDQ_GFX/PDQ_GFX.h> and i.e. #include <PDQ_ST7735/PDQ_ST7735.h>)
+* Hopefully I did not break something :D
+
+TODOs:
+* adjust examples
+
+XarkLabs PDQ_GFX_Libs
 ============
 
 An optimized fork of Adafruit's GFX library (and LCD drivers) for Arduino (AVR).
@@ -43,7 +58,7 @@ Suggestions, issues, bugs and comments welcome.  Via https://hackaday.io/Xark or
 I have also posted a write-up about the development of this library at http://hackaday.io/Xark (describes most of the optimizations done).
 
 
-Issues
+XarkLabs Issues
 ------
 
 Currently, the library may only be used from the INO file in your project. You _cannot_ include it in a header file and
