@@ -158,7 +158,7 @@ enum {
 extern "C" {
 
 // 10 cycle delay (including "rcall")
-static __attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void delay10() {
+__attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void delay10() {
     __asm__ __volatile__(
     // +3 (rcall to get here)
 #if !defined(__AVR_HAVE_RAMPD__)
@@ -175,7 +175,7 @@ static __attribute__((noinline)) __attribute__((naked)) __attribute__((used)) vo
 }
 
 // 13 cycle delay (including "rcall")
-static __attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void delay13() {
+__attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void delay13() {
     __asm__ __volatile__(
         // +3 (rcall to get here)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
@@ -193,7 +193,7 @@ static __attribute__((noinline)) __attribute__((naked)) __attribute__((used)) vo
 }
 
 // 15 cycle delay (including "rcall")
-static __attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void delay15() {
+__attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void delay15() {
     __asm__ __volatile__(
         // +3 (rcall to get here)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
@@ -212,7 +212,7 @@ static __attribute__((noinline)) __attribute__((naked)) __attribute__((used)) vo
 }
 
 // 17 cycle delay (including "rcall")
-static __attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void delay17() {
+__attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void delay17() {
     __asm__ __volatile__(
         // +3 (rcall to get here)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
