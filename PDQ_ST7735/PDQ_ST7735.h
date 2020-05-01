@@ -329,7 +329,7 @@ class PDQ_ST7735 : public _PARENT {
     // higher-level routines
     static void inline begin();
 
-    static void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
+    static void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h);
     static void pushColor(uint16_t color);
     static void pushColor(uint16_t color, int count);
 
@@ -661,10 +661,10 @@ void _TEMPLATE_CLASS::begin() {
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
+void _TEMPLATE_CLASS::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h) {
     spi_begin();
 
-    setAddrWindow_(x0, y0, x1, y1);
+    setAddrWindow_(x0, y0, x0 + w - 1, y0 + h - 1);
 
     spi_end();
 }
