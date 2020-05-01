@@ -435,7 +435,6 @@ class PDQ_GFX : public Print {
 PARENT_TEMPLATE_DEF
 class PDQ_GFX_Button_ {
   public:
-    PDQ_GFX_Button_();
     void initButton(PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES> *gfx, coord_t x, coord_t y, coord_t w, coord_t h, color_t outline, color_t fill, color_t textcolor, const char *label, uint8_t textsize);
     void drawButton(bool inverted = false);
     bool contains(coord_t x, coord_t y);
@@ -446,7 +445,7 @@ class PDQ_GFX_Button_ {
     bool justReleased();
 
   private:
-    PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES> *_gfx;
+    PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES> *_gfx = NULL;
     int16_t _x, _y;
     int16_t _w, _h;
     uint8_t _textsize;
@@ -1014,11 +1013,6 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::invertDisplay(bool i) {
 
 /***************************************************************************/
 // code for the GFX button UI element
-
-PARENT_TEMPLATE_DEF
-PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::PDQ_GFX_Button_() {
-    _gfx = 0;
-}
 
 PARENT_TEMPLATE_DEF
 void PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::initButton(PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES> *gfx, coord_t x, coord_t y, coord_t w, coord_t h, color_t outline, color_t fill, color_t textcolor, const char *label, uint8_t textsize) {
