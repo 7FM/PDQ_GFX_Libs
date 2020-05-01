@@ -903,7 +903,7 @@ void _TEMPLATE_CLASS::drawLine(int x0, int y0, int x1, int y1, uint16_t color) {
         if (setaddr) {
             // We need consider steep orientation here as well
             if (steep) {
-                setAddrWindow_(x0, y0, y0, xBorder);
+                setAddrWindow_(y0, x0, y0, xBorder);
             } else {
                 setAddrWindow_(x0, y0, xBorder, y0);
             }
