@@ -343,7 +343,7 @@ typedef uint16_t color_t; // type used for colors (unsigned)
 
 // swap any type
 template <typename T>
-static inline void swapValue(T &x, T &y) {
+static inline __attribute__((always_inline)) void swapValue(T &x, T &y) {
     T tmp = x;
     x = y;
     y = tmp;
@@ -351,13 +351,13 @@ static inline void swapValue(T &x, T &y) {
 
 // minimum value for any type
 template <typename T>
-static inline T minValue(T &x, T &y) {
+static inline __attribute__((always_inline)) T minValue(T &x, T &y) {
     return x < y ? x : y;
 }
 
 // maximum value for any type
 template <typename T>
-static inline T maxValue(T &x, T &y) {
+static inline __attribute__((always_inline)) T maxValue(T &x, T &y) {
     return x >= y ? x : y;
 }
 
