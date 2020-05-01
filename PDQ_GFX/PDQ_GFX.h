@@ -384,7 +384,7 @@ class PDQ_GFX : public Print {
 
     // These are usually overridden in the driver subclass to be useful (but not internally referenced)
     static void setRotation(uint8_t r);   // only swaps width/height if not supported by driver
-    static void invertDisplay(boolean i); // only if supported by driver
+    static void invertDisplay(bool i); // only if supported by driver
 
     // These exist in PDQ_GFX (and generally have no subclass override)
     static void drawRect(coord_t x, coord_t y, coord_t w, coord_t h, color_t color);
@@ -406,7 +406,7 @@ class PDQ_GFX : public Print {
     static inline void setTextColor(color_t c);
     static inline void setTextColor(color_t c, color_t bg);
     static inline void setTextSize(uint8_t s);
-    static inline void setTextWrap(boolean w);
+    static inline void setTextWrap(bool w);
 
     static inline coord_t width() __attribute__((always_inline)) { return _width; }
     static inline coord_t height() __attribute__((always_inline)) { return _height; }
@@ -429,7 +429,7 @@ class PDQ_GFX : public Print {
     static color_t textcolor, textbgcolor;
     static uint8_t textsize;
     static uint8_t rotation;
-    static boolean wrap; // If set, 'wrap' text at right edge of display
+    static bool wrap; // If set, 'wrap' text at right edge of display
 };
 
 PARENT_TEMPLATE_DEF
@@ -437,13 +437,13 @@ class PDQ_GFX_Button_ {
   public:
     PDQ_GFX_Button_();
     void initButton(PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES> *gfx, coord_t x, coord_t y, coord_t w, coord_t h, color_t outline, color_t fill, color_t textcolor, const char *label, uint8_t textsize);
-    void drawButton(boolean inverted = false);
-    boolean contains(coord_t x, coord_t y);
+    void drawButton(bool inverted = false);
+    bool contains(coord_t x, coord_t y);
 
-    void press(boolean p);
-    boolean isPressed();
-    boolean justPressed();
-    boolean justReleased();
+    void press(bool p);
+    bool isPressed();
+    bool justPressed();
+    bool justReleased();
 
   private:
     PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES> *_gfx;
@@ -453,7 +453,7 @@ class PDQ_GFX_Button_ {
     color_t _outlinecolor, _fillcolor, _textcolor;
     char _label[10];
 
-    boolean currstate, laststate;
+    bool currstate, laststate;
 };
 
 // -----------------------------------------------
@@ -483,7 +483,7 @@ uint8_t PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::textsize = 1;
 PARENT_TEMPLATE_DEF
 uint8_t PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::rotation = 0;
 PARENT_TEMPLATE_DEF
-boolean PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::wrap = true; // If set, 'wrap' text at right edge of display
+bool PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::wrap = true; // If set, 'wrap' text at right edge of display
 
 // Draw a circle outline
 PARENT_TEMPLATE_DEF
@@ -571,7 +571,7 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::fillCircle(coord_t x0, coord_t y0, co
 // Bresenham's algorithm - thx Wikipedia
 PARENT_TEMPLATE_DEF
 void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawLine_(coord_t x0, coord_t y0, coord_t x1, coord_t y1, color_t color) {
-    int8_t steep = abs(y1 - y0) > abs(x1 - x0);
+    bool steep = abs(y1 - y0) > abs(x1 - x0);
     if (steep) {
         swapValue(x0, y0);
         swapValue(x1, y1);
@@ -582,9 +582,8 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawLine_(coord_t x0, coord_t y0, coo
         swapValue(y0, y1);
     }
 
-    coord_t dx, dy;
-    dx = x1 - x0;
-    dy = abs(y1 - y0);
+    coord_t dx = x1 - x0;
+    coord_t dy = abs(y1 - y0);
 
     coord_t err = dx / 2;
     coord_t ystep;
@@ -923,7 +922,7 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::setTextColor(color_t c, color_t b) {
 }
 
 PARENT_TEMPLATE_DEF
-void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::setTextWrap(boolean w) {
+void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::setTextWrap(bool w) {
     wrap = w;
 }
 
@@ -1008,7 +1007,7 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::getTextBounds(const __FlashStringHelp
 }
 
 PARENT_TEMPLATE_DEF
-void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::invertDisplay(boolean i) {
+void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::invertDisplay(bool i) {
     // Used by driver when it has no special support
     // Do nothing, must be supported by driver
 }
@@ -1037,7 +1036,7 @@ void PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::initButton(PDQ_GFX<PARENT_TEM
 }
 
 PARENT_TEMPLATE_DEF
-void PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::drawButton(boolean inverted) {
+void PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::drawButton(bool inverted) {
     uint16_t fill, outline, text;
 
     if (!inverted) {
@@ -1060,7 +1059,7 @@ void PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::drawButton(boolean inverted) 
 }
 
 PARENT_TEMPLATE_DEF
-boolean PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::contains(coord_t x, coord_t y) {
+bool PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::contains(coord_t x, coord_t y) {
     if ((x < (_x - _w / 2)) || (x > (_x + _w / 2)))
         return false;
     if ((y < (_y - _h / 2)) || (y > (_y + _h / 2)))
@@ -1069,23 +1068,23 @@ boolean PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::contains(coord_t x, coord_
 }
 
 PARENT_TEMPLATE_DEF
-void PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::press(boolean p) {
+void PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::press(bool p) {
     laststate = currstate;
     currstate = p;
 }
 
 PARENT_TEMPLATE_DEF
-boolean PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::isPressed() {
+bool PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::isPressed() {
     return currstate;
 }
 
 PARENT_TEMPLATE_DEF
-boolean PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::justPressed() {
+bool PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::justPressed() {
     return (currstate && !laststate);
 }
 
 PARENT_TEMPLATE_DEF
-boolean PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::justReleased() {
+bool PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::justReleased() {
     return (!currstate && laststate);
 }
 
