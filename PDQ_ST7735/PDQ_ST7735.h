@@ -338,10 +338,16 @@ class PDQ_ST7735 : public _PARENT {
     static void drawFastVLine(int x, int y, int h, uint16_t color);
     static void drawFastHLine(int x, int y, int w, uint16_t color);
     static void setRotation(uint8_t r);
-    static void invertDisplay(boolean i);
+    static void invertDisplay(bool i);
 
-    static inline void fillScreen(uint16_t color) __attribute__((always_inline)) {
-        _PARENT::fillScreen_(color); // call generic version
+    static void fillScreen(uint16_t color) {
+        spi_begin();
+
+        setAddrWindow_(0, 0, _PARENT::_width - 1, _PARENT::_height - 1);
+
+        spiWrite16(color, ST7735_TFTWIDTH * ST7735_TFTHEIGHT_18);
+
+        spi_end();
     }
 
     static void drawLine(int x0, int y0, int x1, int y1, uint16_t color);
