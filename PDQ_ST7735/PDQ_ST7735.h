@@ -714,22 +714,26 @@ void _TEMPLATE_CLASS::drawFastVLine(int x, int y, int h, uint16_t color) {
     if ((x < 0) || (x >= _PARENT::_width) || (y >= _PARENT::_height))
         return;
 
-    if (y < 0) {
-        h += y;
-        y = 0;
-    }
-
-    int y1 = y + h;
+    int y1 = y + h - 1;
 
     if (y1 < 0)
         return;
 
-    if (y1 > _PARENT::_height)
+    // Clip left
+    if (y < 0) {
+        h = y1 + 1;
+        y = 0;
+    }
+
+    // Clip right
+    if (y1 >= _PARENT::_height) {
+        y1 = _PARENT::_height - 1;
         h = _PARENT::_height - y;
+    }
 
     spi_begin();
 
-    setAddrWindow_(x, y, x, _PARENT::_height);
+    setAddrWindow_(x, y, x, y1);
     spiWrite16(color, h);
 
     spi_end();
@@ -741,22 +745,26 @@ void _TEMPLATE_CLASS::drawFastHLine(int x, int y, int w, uint16_t color) {
     if ((x >= _PARENT::_width) || (y < 0) || (y >= _PARENT::_height))
         return;
 
-    if (x < 0) {
-        w += x;
-        x = 0;
-    }
-
-    int x1 = x + w;
+    int x1 = x + w - 1;
 
     if (x1 < 0)
         return;
 
-    if (x1 > _PARENT::_width)
-        w = _PARENT::_width - w;
+    // Clip left
+    if (x < 0) {
+        w = x1 + 1;
+        x = 0;
+    }
+
+    // Clip right
+    if (x1 >= _PARENT::_width) {
+        x1 = _PARENT::_width - 1;
+        w = _PARENT::_width - x;
+    }
 
     spi_begin();
 
-    setAddrWindow_(x, y, _PARENT::_width, y);
+    setAddrWindow_(x, y, x1, y);
     spiWrite16(color, w);
 
     spi_end();
@@ -823,7 +831,7 @@ void _TEMPLATE_CLASS::setRotation(uint8_t r) {
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::invertDisplay(boolean i) {
+void _TEMPLATE_CLASS::invertDisplay(bool i) {
     spi_begin();
 
     writeCommand(i ? ST7735_INVON : ST7735_INVOFF);
