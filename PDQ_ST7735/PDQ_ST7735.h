@@ -935,26 +935,47 @@ void _TEMPLATE_CLASS::fillRect(int x, int y, int w, int h, uint16_t color) {
     if ((x >= _PARENT::_width) || (y >= _PARENT::_height))
         return;
 
+    if (w < 0) {    // If negative width...
+        x += w + 1; //   Move X to left edge
+        w = -w;     //   Use positive width
+    }
+    if (h < 0) {    // If negative height...
+        y += h + 1; //   Move Y to top edge
+        h = -h;     //   Use positive height
+    }
+
+    int x2 = x + w - 1;
+    int y2 = y + h - 1;
+
+    if (x2 < 0 || y2 < 0) {
+        return;
+    }
+    // Clip left
     if (x < 0) {
-        w += x;
         x = 0;
+        w = x2 + 1;
     }
+    // Clip top
     if (y < 0) {
-        h += y;
         y = 0;
+        h = y2 + 1;
     }
-    if ((x + w) > _PARENT::_width)
+
+    if (x2 >= _PARENT::_width) {
+        x2 = _PARENT::_width - 1;
         w = _PARENT::_width - x;
-    if ((y + h) > _PARENT::_height)
+    }
+
+    if (y2 >= _PARENT::_height) {
+        y2 = _PARENT::_height - 1;
         h = _PARENT::_height - y;
+    }
 
     spi_begin();
 
-    setAddrWindow_(x, y, x + w - 1, _PARENT::_height);
+    setAddrWindow_(x, y, x2, y2);
 
-    for (; h > 0; h--) {
-        spiWrite16(color, w);
-    }
+    spiWrite16(color, w * h);
 
     spi_end();
 }
