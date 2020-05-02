@@ -157,23 +157,6 @@ enum {
 
 extern "C" {
 
-// 10 cycle delay (including "rcall")
-__attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void delay10() {
-    __asm__ __volatile__(
-    // +3 (rcall to get here)
-#if !defined(__AVR_HAVE_RAMPD__)
-        "	adiw	r24,0\n" // +2 (2-cycle NOP)
-        "	nop\n"           // +1 (1-cycle NOP)
-#else
-        "	adiw	r24,0\n" // +2 (2-cycle NOP)
-#endif
-        "	ret\n" // +4 (or +5 on >64KB AVR with RAMPD reg)
-                   // = 10 cycles
-        :
-        :
-        :);
-}
-
 // 13 cycle delay (including "rcall")
 __attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void delay13() {
     __asm__ __volatile__(
@@ -183,7 +166,7 @@ __attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void dela
 #if !defined(__AVR_HAVE_RAMPD__)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
 #else
-        "	nop\n"           // +1 (1-cycle NOP)
+        "	nop\n" // +1 (1-cycle NOP)
 #endif
         "	ret\n" // +4 (or +5 on >64KB AVR with RAMPD reg)
                    // = 13 cycles
@@ -202,7 +185,7 @@ __attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void dela
 #if !defined(__AVR_HAVE_RAMPD__)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
 #else
-        "	nop\n"           // +1 (1-cycle NOP)
+        "	nop\n" // +1 (1-cycle NOP)
 #endif
         "	ret\n" // +4 (or +5 on >64KB AVR with RAMPD reg)
                    // = 15 cycles
@@ -222,7 +205,7 @@ __attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void dela
 #if !defined(__AVR_HAVE_RAMPD__)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
 #else
-        "	nop\n"           // +1 (1-cycle NOP)
+        "	nop\n" // +1 (1-cycle NOP)
 #endif
         "	ret\n" // +4 (or +5 on >64KB AVR with RAMPD reg)
                    // = 17 cycles
@@ -842,87 +825,70 @@ void _TEMPLATE_CLASS::invertDisplay(bool i) {
 // Bresenham's algorithm - thx Wikipedia
 _TEMPLATE_DEF
 void _TEMPLATE_CLASS::drawLine(int x0, int y0, int x1, int y1, uint16_t color) {
-    int8_t steep = abs(y1 - y0) > abs(x1 - x0);
-    coord_t xBorder;
+    coord_t dx = x1 - x0;
+    coord_t dy = y1 - y0;
+    bool steep = abs(dy) > abs(dx);
     coord_t yBorder;
     if (steep) {
-        // y increments every iteration (y0 is x-axis, and x0 is y-axis)
-        xBorder = _PARENT::_height;
+        // y increments every iteration (y0 is x-axis, and x0 is y-axis) after changing x and y => dx >= dy is always true
         yBorder = _PARENT::_width;
         swapValue(x0, y0);
         swapValue(x1, y1);
+        swapValue(dx, dy);
     } else {
         // x increments every iteration (x0 is x-axis, and y0 is y-axis)
-        xBorder = _PARENT::_width;
         yBorder = _PARENT::_height;
     }
 
-    if (x0 > x1) {
+    // This is needed for the window optimization which avoids updating the address window when drawing parallel subparts
+    if (dx < 0) {
+        dx = -dx;
         swapValue(x0, x1);
         swapValue(y0, y1);
+        dy = -dy;
     }
 
-    if (x1 < 0)
-        return;
-
-    int dx, dy;
-    dx = x1 - x0;
-    dy = abs(y1 - y0);
-
-    int err = dx / 2;
     int8_t ystep;
 
-    if (y0 < y1) {
-        ystep = 1;
-    } else {
+    if (dy < 0) {
         ystep = -1;
+        dy = -dy;
+    } else {
+        ystep = 1;
     }
 
-    uint8_t setaddr = 1;
-
-    if (x1 >= xBorder)
-        x1 = xBorder - 1;
-
-    for (; x0 <= x1; ++x0) {
-        if ((x0 >= 0) && (y0 >= 0) && (y0 < yBorder))
-            break;
-
-        err -= dy;
-        if (err < 0) {
-            err += dx;
-            y0 += ystep;
-        }
-    }
-
-    if (x0 > x1)
-        return;
+    // dx and dy are now always positive
+    coord_t err = dx >> 1;
 
     spi_begin();
 
-    for (; x0 <= x1; ++x0) {
-        if (setaddr) {
-            // We need consider steep orientation here as well
-            if (steep) {
-                setAddrWindow_(y0, x0, y0, xBorder);
-            } else {
-                setAddrWindow_(x0, y0, xBorder, y0);
-            }
-            setaddr = 0;
-        }
+// We need consider steep orientation here as well
+before_loop:
+    if (steep) {
+        setAddrWindow_(y0, x0, y0, x1);
+    } else {
+        setAddrWindow_(x0, y0, x1, y0);
+    }
+    for (; x0 <= x1;) { // +3 cycles (2 compares + 1 branch(false case))
+        // +2 cycles to load color
         spiWrite16_lineDraw(color);
-        err -= dy;
-        if (err < 0) {
+        ++x0;          // +2 cycles
+        err -= dy;     // +1 cycle
+        if (err < 0) { // +4 Cycles for false case (1 for calculating check bit 1 for check < 0 and 2 for jump)
             y0 += ystep;
             if ((y0 < 0) || (y0 >= yBorder))
                 break;
             err += dx;
-            setaddr = 1;
+            goto before_loop;
         } else {
             __asm__ __volatile__(
-                "	rcall	delay10\n"
+                "	adiw	r24,0\n" // +2 (2-cycle NOP)
+                "	nop\n"           // +1 (1-cycle NOP)
                 :
                 :
                 :);
+            // +2 cycles for jump back
+            // = 17 cycles (the other way around with goto before loop is uncritically)
         }
     }
 
