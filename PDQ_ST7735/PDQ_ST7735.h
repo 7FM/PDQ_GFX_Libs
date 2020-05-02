@@ -378,30 +378,31 @@ class PDQ_ST7735 : public _PARENT {
 
     // internal version that does not spi_begin()/spi_end()
     static INLINE void setAddrWindow_(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) INLINE_OPT {
-        writeCommand(ST7735_CASET); // column address set
-        if ((ST7735_CHIPSET == ST7735_INITR_GREENTAB) || (ST7735_CHIPSET == ST7735_INITR_144GREENTAB)) {
-            spiWrite16(x0 + 2);        // XSTART
-            spiWrite16_preCmd(x1 + 2); // XEND
-        } else {
-            spiWrite16(x0);        // XSTART
-            spiWrite16_preCmd(x1); // XEND
-        }
+        writeCommand(ST7735_CASET);      // column address set
+        spiWrite16(x0 + _xstart);        // XSTART
+        spiWrite16_preCmd(x1 + _xstart); // XEND
 
-        writeCommand(ST7735_RASET); // row address set
-        if (ST7735_CHIPSET == ST7735_INITR_GREENTAB) {
-            spiWrite16(y0 + 1);        // YSTART
-            spiWrite16_preCmd(y1 + 1); // YEND
-        } else if (ST7735_CHIPSET == ST7735_INITR_144GREENTAB) {
-            spiWrite16(y0 + 3);        // YSTART
-            spiWrite16_preCmd(y1 + 3); // YEND
-        } else {
-            spiWrite16(y0);        // YSTART
-            spiWrite16_preCmd(y1); // YEND
-        }
+        writeCommand(ST7735_RASET);      // row address set
+        spiWrite16(y0 + _ystart);        // YSTART
+        spiWrite16_preCmd(y1 + _ystart); // YEND
 
         writeCommand(ST7735_RAMWR); // write to RAM
     }
+
+    static coord_t _xstart;
+    static coord_t _ystart;
+    static coord_t _colstart;
+    static coord_t _rowstart;
 };
+
+_TEMPLATE_DEF
+coord_t _TEMPLATE_CLASS::_xstart = 0;
+_TEMPLATE_DEF
+coord_t _TEMPLATE_CLASS::_ystart = 0;
+_TEMPLATE_DEF
+coord_t _TEMPLATE_CLASS::_colstart = 0;
+_TEMPLATE_DEF
+coord_t _TEMPLATE_CLASS::_rowstart = 0;
 
 _TEMPLATE_DEF
 void _TEMPLATE_CLASS::begin() {
@@ -422,6 +423,14 @@ void _TEMPLATE_CLASS::begin() {
 
     FastPin<ST7735_CS_PIN>::hi(); // CS <= HIGH (so no spurious data)
     FastPin<ST7735_DC_PIN>::hi(); // RS <= HIGH (default data byte)
+
+    if (ST7735_CHIPSET == ST7735_INITR_GREENTAB) {
+        _xstart = _colstart = 2;
+        _ystart = _rowstart = 1;
+    } else if (ST7735_CHIPSET == ST7735_INITR_144GREENTAB) {
+        _xstart = _colstart = 2;
+        _ystart = _rowstart = 3;
+    }
 
     uint8_t oldSPCR;
     if (ST7735_SAVE_SPCR) {
@@ -760,56 +769,65 @@ void _TEMPLATE_CLASS::setRotation(uint8_t r) {
     spi_begin();
 
     writeCommand(ST7735_MADCTL);
+    uint8_t data;
 
     switch (_PARENT::rotation) {
         default:
         case 0:
             if (ST7735_CHIPSET == ST7735_INITR_BLACKTAB)
-                writeData(ST7735_MADCTL_MX | ST7735_MADCTL_MY | ST7735_MADCTL_RGB);
+                data = ST7735_MADCTL_MX | ST7735_MADCTL_MY | ST7735_MADCTL_RGB;
             else
-                writeData(ST7735_MADCTL_MX | ST7735_MADCTL_MY | ST7735_MADCTL_BGR);
+                data = ST7735_MADCTL_MX | ST7735_MADCTL_MY | ST7735_MADCTL_BGR;
             _PARENT::_width = ST7735_TFTWIDTH;
             if (ST7735_CHIPSET == ST7735_INITR_144GREENTAB)
                 _PARENT::_height = ST7735_TFTHEIGHT_144;
             else
                 _PARENT::_height = ST7735_TFTHEIGHT_18;
-
+            _xstart = _colstart;
+            _ystart = _rowstart;
             break;
         case 1:
             if (ST7735_CHIPSET == ST7735_INITR_BLACKTAB)
-                writeData(ST7735_MADCTL_MY | ST7735_MADCTL_MV | ST7735_MADCTL_RGB);
+                data = ST7735_MADCTL_MY | ST7735_MADCTL_MV | ST7735_MADCTL_RGB;
             else
-                writeData(ST7735_MADCTL_MY | ST7735_MADCTL_MV | ST7735_MADCTL_BGR);
+                data = ST7735_MADCTL_MY | ST7735_MADCTL_MV | ST7735_MADCTL_BGR;
             if (ST7735_CHIPSET == ST7735_INITR_144GREENTAB)
                 _PARENT::_width = ST7735_TFTHEIGHT_144;
             else
                 _PARENT::_width = ST7735_TFTHEIGHT_18;
             _PARENT::_height = ST7735_TFTWIDTH;
+            _ystart = _colstart;
+            _xstart = _rowstart;
             break;
         case 2:
             if (ST7735_CHIPSET == ST7735_INITR_BLACKTAB)
-                writeData(ST7735_MADCTL_RGB);
+                data = ST7735_MADCTL_RGB;
             else
-                writeData(ST7735_MADCTL_BGR);
+                data = ST7735_MADCTL_BGR;
             _PARENT::_width = ST7735_TFTWIDTH;
             if (ST7735_CHIPSET == ST7735_INITR_144GREENTAB)
                 _PARENT::_height = ST7735_TFTHEIGHT_144;
             else
                 _PARENT::_height = ST7735_TFTHEIGHT_18;
+            _xstart = _colstart;
+            _ystart = _rowstart;
             break;
         case 3:
             if (ST7735_CHIPSET == ST7735_INITR_BLACKTAB)
-                writeData(ST7735_MADCTL_MX | ST7735_MADCTL_MV | ST7735_MADCTL_RGB);
+                data = ST7735_MADCTL_MX | ST7735_MADCTL_MV | ST7735_MADCTL_RGB;
             else
-                writeData(ST7735_MADCTL_MX | ST7735_MADCTL_MV | ST7735_MADCTL_BGR);
+                data = ST7735_MADCTL_MX | ST7735_MADCTL_MV | ST7735_MADCTL_BGR;
             if (ST7735_CHIPSET == ST7735_INITR_144GREENTAB)
                 _PARENT::_width = ST7735_TFTHEIGHT_144;
             else
                 _PARENT::_width = ST7735_TFTHEIGHT_18;
             _PARENT::_height = ST7735_TFTWIDTH;
+            _ystart = _colstart;
+            _xstart = _rowstart;
             break;
     }
 
+    writeData(data);
     spi_end();
 }
 
