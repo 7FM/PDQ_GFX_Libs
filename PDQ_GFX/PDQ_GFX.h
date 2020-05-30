@@ -421,7 +421,6 @@ class PDQ_GFX : public Print {
   private:
     static void generalGetTextBounds(uint8_t (*memReader)(const uint8_t *), const uint8_t *__restrict__ str, coord_t x, coord_t y, int16_t *__restrict__ x1, int16_t *__restrict__ y1, uint16_t *__restrict__ w, uint16_t *__restrict__ h);
     static void generalDrawBitmap(uint8_t (*memReader)(const uint8_t *), coord_t x, coord_t y, uint8_t *bitmap, coord_t w, coord_t h, color_t color, bool setBg, color_t bg);
-    static inline void fillRectWrapper(coord_t x, coord_t y, color_t color);
 
   protected:
     static coord_t _width, _height; // Display w/h as modified by current rotation
@@ -850,11 +849,6 @@ size_t PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::write(uint8_t c) {
     return 1;
 }
 
-PARENT_TEMPLATE_DEF
-void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::fillRectWrapper(coord_t x, coord_t y, color_t color) {
-    HW::fillRect(x, y, textsize, textsize, color);
-}
-
 // Draw a character with built-in font
 PARENT_TEMPLATE_DEF
 void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawChar(coord_t x, coord_t y, unsigned char c, color_t color, color_t bg) {
@@ -873,7 +867,7 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawChar(coord_t x, coord_t y, unsign
 
     const uint8_t *readAddress = glcdfont + c * 5;
 
-    void (*drawer)(coord_t, coord_t, color_t) = ((textsize == 1) ? &HW::drawPixel : &PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::fillRectWrapper);
+    const bool isTextSize1 = textsize == 1;
 
     const coord_t endIt = y + (textsize << 3);
     for (uint8_t i = 0; i < 6; ++i, x += textsize) {
@@ -886,9 +880,17 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawChar(coord_t x, coord_t y, unsign
 
         for (coord_t j = y; j < endIt; j += textsize) {
             if (line & 0x01) {
-                drawer(x, j, color);
+                if (isTextSize1) {
+                    HW::drawPixel(x, j, color);
+                } else {
+                    HW::fillRect(x, y, textsize, textsize, color);
+                }
             } else if (is_opaque) {
-                drawer(x, j, bg);
+                if (isTextSize1) {
+                    HW::drawPixel(x, j, bg);
+                } else {
+                    HW::fillRect(x, y, textsize, textsize, bg);
+                }
             }
             line >>= 1;
         }
