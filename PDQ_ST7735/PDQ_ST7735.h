@@ -64,6 +64,8 @@ as well as Adafruit raw 1.8" TFT display
 #define INLINE inline
 #define INLINE_OPT __attribute__((always_inline))
 
+#define NOINLINE_NAKED_USED __attribute__((noinline)) __attribute__((naked)) __attribute__((used))
+
 typedef enum {
     ST7735_INITB = 0,                                // 1.8" (128x160) ST7735B chipset (only one type)
     ST7735_INITR_GREENTAB = 1,                       // 1.8" (128x160) ST7735R chipset with green tab (same as ST7735_INITR_18GREENTAB)
@@ -158,7 +160,7 @@ enum {
 extern "C" {
 
 // 13 cycle delay (including "rcall")
-__attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void delay13() {
+NOINLINE_NAKED_USED void delay13() {
     __asm__ __volatile__(
         // +3 (rcall to get here)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
@@ -176,7 +178,7 @@ __attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void dela
 }
 
 // 15 cycle delay (including "rcall")
-__attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void delay15() {
+NOINLINE_NAKED_USED void delay15() {
     __asm__ __volatile__(
         // +3 (rcall to get here)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
@@ -195,7 +197,7 @@ __attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void dela
 }
 
 // 17 cycle delay (including "rcall")
-__attribute__((noinline)) __attribute__((naked)) __attribute__((used)) void delay17() {
+NOINLINE_NAKED_USED void delay17() {
     __asm__ __volatile__(
         // +3 (rcall to get here)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
@@ -337,7 +339,7 @@ class PDQ_ST7735 : public _PARENT {
     static void fillRect(int x, int y, int w, int h, uint16_t color);
 
     // Pass 8-bit (each) R,G,B, get back 16-bit packed color
-    static constexpr inline uint16_t color565(uint8_t r, uint8_t g, uint8_t b) {
+    static constexpr INLINE uint16_t color565(uint8_t r, uint8_t g, uint8_t b) {
         return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
     }
 
@@ -347,7 +349,7 @@ class PDQ_ST7735 : public _PARENT {
   private:
     // NOTE: Make sure each spi_begin() is matched with a single spi_end() (and don't call either twice)
     // set CS back to low (LCD selected)
-    static inline void spi_begin() __attribute__((always_inline)) {
+    static INLINE void spi_begin() INLINE_OPT {
 
         if (ST7735_SAVE_SPCR) {
             swapValue(save_SPCR, SPCR); // swap initial/current SPCR settings
@@ -357,7 +359,7 @@ class PDQ_ST7735 : public _PARENT {
 
     // NOTE: Make sure each spi_begin() is matched with a single spi_end() (and don't call either twice)
     // reset CS back to high (LCD unselected)
-    static inline void spi_end() __attribute__((always_inline)) {
+    static INLINE void spi_end() INLINE_OPT {
         FastPin<ST7735_CS_PIN>::hi(); // CS <= HIGH (deselected)
         if (ST7735_SAVE_SPCR) {
             swapValue(SPCR, save_SPCR); // swap current/initial SPCR settings
@@ -372,7 +374,7 @@ class PDQ_ST7735 : public _PARENT {
     }
 
     // write SPI byte with RS assumed low indicating a data byte
-    static inline void writeData(uint8_t data) __attribute__((always_inline)) {
+    static inline void writeData(uint8_t data) INLINE_OPT {
         spiWrite(data);
     }
 
