@@ -165,10 +165,16 @@ NOINLINE_NAKED_USED void delay13() {
         // +3 (rcall to get here)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
+#if !defined(FORCE_RCALL) && !defined(SAVE_DELAYS)
 #if !defined(__AVR_HAVE_RAMPD__)
-        "	adiw	r24,0\n" // +2 (2-cycle NOP)
+        "	nop\n" // +1 (1-cycle NOP)
+#endif
+#else
+#if !defined(__AVR_HAVE_RAMPD__)
+        "	adiw	r24,0\n"   // +2 (2-cycle NOP)
 #else
         "	nop\n" // +1 (1-cycle NOP)
+#endif
 #endif
         "	ret\n" // +4 (or +5 on >64KB AVR with RAMPD reg)
                    // = 13 cycles
@@ -184,10 +190,16 @@ NOINLINE_NAKED_USED void delay15() {
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
+#if !defined(FORCE_RCALL) && !defined(SAVE_DELAYS)
 #if !defined(__AVR_HAVE_RAMPD__)
-        "	adiw	r24,0\n" // +2 (2-cycle NOP)
+        "	nop\n" // +1 (1-cycle NOP)
+#endif
+#else
+#if !defined(__AVR_HAVE_RAMPD__)
+        "	adiw	r24,0\n"   // +2 (2-cycle NOP)
 #else
         "	nop\n" // +1 (1-cycle NOP)
+#endif
 #endif
         "	ret\n" // +4 (or +5 on >64KB AVR with RAMPD reg)
                    // = 15 cycles
@@ -204,10 +216,16 @@ NOINLINE_NAKED_USED void delay17() {
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
         "	adiw	r24,0\n" // +2 (2-cycle NOP)
+#if !defined(FORCE_RCALL) && !defined(SAVE_DELAYS)
 #if !defined(__AVR_HAVE_RAMPD__)
-        "	adiw	r24,0\n" // +2 (2-cycle NOP)
+        "	nop\n" // +1 (1-cycle NOP)
+#endif
+#else
+#if !defined(__AVR_HAVE_RAMPD__)
+        "	adiw	r24,0\n"   // +2 (2-cycle NOP)
 #else
         "	nop\n" // +1 (1-cycle NOP)
+#endif
 #endif
         "	ret\n" // +4 (or +5 on >64KB AVR with RAMPD reg)
                    // = 17 cycles
@@ -221,7 +239,11 @@ NOINLINE_NAKED_USED void delay17() {
 static INLINE INLINE_OPT void spiWrite(uint8_t data) {
     SPDR = data;
     __asm__ __volatile__(
+#ifdef FORCE_RCALL
         "	rcall	delay17\n" // rcall unmangled delay17 (compiler would needlessly save/restore regs)
+#else
+        "	call	delay17\n" // call unmangled delay17 (compiler would needlessly save/restore regs)
+#endif
         :
         :
         :);
@@ -232,7 +254,11 @@ static INLINE INLINE_OPT void spiWrite_preCmd(uint8_t data) {
     SPDR = data;
 
     __asm__ __volatile__(
+#ifdef FORCE_RCALL
         "	rcall	delay15\n" // rcall unmangled delay15 (compiler would needlessly save/restore regs)
+#else
+        "	call	delay15\n" // call unmangled delay15 (compiler would needlessly save/restore regs)
+#endif
         :
         :
         :);
@@ -243,9 +269,17 @@ static INLINE INLINE_OPT void spiWrite16(uint16_t data) {
     uint8_t temp;
     __asm__ __volatile__(
         "	out	%[spi],%[hi]\n" // write SPI data (18 cycles until next write)
-        "	rcall	delay17\n"  // rcall unmangled delay17 (compiler would needlessly save/restore regs)
+#ifdef FORCE_RCALL
+        "	rcall	delay17\n" // rcall unmangled delay17 (compiler would needlessly save/restore regs)
+#else
+        "	call	delay17\n" // call unmangled delay17 (compiler would needlessly save/restore regs)
+#endif
         "	out	%[spi],%[lo]\n" // write SPI data (18 cycles until next write)
-        "	rcall	delay17\n"  // rcall unmangled delay17 (compiler would needlessly save/restore regs)
+#ifdef FORCE_RCALL
+        "	rcall	delay17\n" // rcall unmangled delay17 (compiler would needlessly save/restore regs)
+#else
+        "	call	delay17\n" // call unmangled delay17 (compiler would needlessly save/restore regs)
+#endif
 
         : [ temp ] "=d"(temp)
         : [ spi ] "i"(_SFR_IO_ADDR(SPDR)), [ lo ] "r"((uint8_t)data), [ hi ] "r"((uint8_t)(data >> 8))
@@ -257,9 +291,17 @@ static INLINE INLINE_OPT void spiWrite16_preCmd(uint16_t data) {
     uint8_t temp;
     __asm__ __volatile__(
         "	out	%[spi],%[hi]\n" // write SPI data (18 cycles until next write)
-        "	rcall	delay17\n"  // rcall unmangled delay17 (compiler would needlessly save/restore regs)
+#ifdef FORCE_RCALL
+        "	rcall	delay17\n" // rcall unmangled delay17 (compiler would needlessly save/restore regs)
+#else
+        "	call	delay17\n" // call unmangled delay17 (compiler would needlessly save/restore regs)
+#endif
         "	out	%[spi],%[lo]\n" // write SPI data (18 cycles until next write)
-        "	rcall	delay15\n"  // rcall unmangled delay15 (compiler would needlessly save/restore regs)
+#ifdef FORCE_RCALL
+        "	rcall	delay15\n" // rcall unmangled delay15 (compiler would needlessly save/restore regs)
+#else
+        "	call	delay15\n" // call unmangled delay15 (compiler would needlessly save/restore regs)
+#endif
 
         : [ temp ] "=d"(temp)
         : [ spi ] "i"(_SFR_IO_ADDR(SPDR)), [ lo ] "r"((uint8_t)data), [ hi ] "r"((uint8_t)(data >> 8))
@@ -271,7 +313,11 @@ static INLINE INLINE_OPT void spiWrite16_lineDraw(uint16_t data) {
     uint8_t temp;
     __asm__ __volatile__(
         "	out	%[spi],%[hi]\n" // write SPI data (18 cycles until next write)
-        "	rcall	delay17\n"  // rcall unmangled delay17 (compiler would needlessly save/restore regs)
+#ifdef FORCE_RCALL
+        "	rcall	delay17\n" // rcall unmangled delay17 (compiler would needlessly save/restore regs)
+#else
+        "	call	delay17\n" // call unmangled delay17 (compiler would needlessly save/restore regs)
+#endif
         "	out	%[spi],%[lo]\n" // write SPI data (18 cycles until next write)
 
         : [ temp ] "=d"(temp)
@@ -287,9 +333,17 @@ static INLINE INLINE_OPT void spiWrite16(uint16_t data, int count) {
         "	brmi	4f\n"         // if < 0 then done
         "	breq	4f\n"         // if == 0 then done
         "1:	out	%[spi],%[hi]\n"   // write SPI data (18 cycles until next write)
-        "	rcall	delay17\n"    // rcall unmangled delay17 (compiler would needlessly save/restore regs)
-        "	out	%[spi],%[lo]\n"   // write SPI data (18 cycles until next write)
-        "	rcall	delay13\n"    // rcall unmangled delay13 (compiler would needlessly save/restore regs)
+#ifdef FORCE_RCALL
+        "	rcall	delay17\n" // rcall unmangled delay17 (compiler would needlessly save/restore regs)
+#else
+        "	call	delay17\n" // call unmangled delay17 (compiler would needlessly save/restore regs)
+#endif
+        "	out	%[spi],%[lo]\n" // write SPI data (18 cycles until next write)
+#ifdef FORCE_RCALL
+        "	rcall	delay13\n" // rcall unmangled delay13 (compiler would needlessly save/restore regs)
+#else
+        "	call	delay13\n" // call unmangled delay13 (compiler would needlessly save/restore regs)
+#endif
         "	sbiw	%[count],1\n" // +2	decrement count
         "	brne	1b\n"         // +2/1	if != 0 then loop
                                   // = 13 + 2 + 2 (17 cycles)
