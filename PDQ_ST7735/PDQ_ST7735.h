@@ -409,6 +409,13 @@ coord_t _TEMPLATE_CLASS::_rowstart = 0;
 _TEMPLATE_DEF
 void _TEMPLATE_CLASS::begin() {
 
+    // set CS and RS pin directions to output
+    FastPin<ST7735_CS_PIN>::setOutput();
+    FastPin<ST7735_DC_PIN>::setOutput();
+
+    FastPin<ST7735_CS_PIN>::hi(); // CS <= HIGH (so no spurious data)
+    FastPin<ST7735_DC_PIN>::hi(); // RS <= HIGH (default data byte)
+
     FastPin<ST7735_RST_PIN>::setOutput();
     FastPin<ST7735_RST_PIN>::lo();
 
@@ -418,13 +425,6 @@ void _TEMPLATE_CLASS::begin() {
     delay(1);
 #endif
     FastPin<ST7735_RST_PIN>::hi();
-
-    // set CS and RS pin directions to output
-    FastPin<ST7735_CS_PIN>::setOutput();
-    FastPin<ST7735_DC_PIN>::setOutput();
-
-    FastPin<ST7735_CS_PIN>::hi(); // CS <= HIGH (so no spurious data)
-    FastPin<ST7735_DC_PIN>::hi(); // RS <= HIGH (default data byte)
 
     if (ST7735_CHIPSET == ST7735_INITR_GREENTAB) {
         _xstart = _colstart = 2;
