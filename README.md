@@ -14,7 +14,8 @@ My Changes:
 * Small adjustment to the assembler code to work with -Wl,--relax compiler flag which replaces call (4 cycles) with rcall (3 cycles) where possible => breaks timing if not adjusted, to be save enable SAVE_DELAYS or FORCE_RCALL (if it succeeds linking)
 * Removed some compability functions
 * 1 or 2 code generalizations
-* changed includes this should fix the issue mentioned below (at least for platformio it does just use #include <PDQ_GFX/PDQ_GFX.h> and i.e. #include <PDQ_ST7735/PDQ_ST7735.h>)
+* optimize variable sizes which results in faster execution + less bytes needed (if something goes wrong first try to increase the variable sizes if this might be the reason, this might also affect timings)
+* changed includes this should fix the issue mentioned below (at least for platformio it does, just use #include <PDQ_GFX/PDQ_GFX.h> and i.e. #include <PDQ_ST7735/PDQ_ST7735.h>)
 * Hopefully I did not break something :D
 
 TODOs:
