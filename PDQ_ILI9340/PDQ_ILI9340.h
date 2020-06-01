@@ -425,37 +425,40 @@ static inline void delay17() {}
 static volatile uint8_t save_SPCR; // initial SPCR value/saved SPCR value (swapped in spi_begin/spi_end)
 #endif
 
+typedef uint16_t coord_t;
+typedef int16_t s_coord_t;
+
 #define _TEMPLATE_DEF template <uint8_t ILI9340_CS_PIN, uint8_t ILI9340_DC_PIN, uint8_t ILI9340_RST_PIN, bool ILI9340_SAVE_SPCR>
 
 #define _TEMPLATE_CLASS PDQ_ILI9340<ILI9340_CS_PIN, ILI9340_DC_PIN, ILI9340_RST_PIN, ILI9340_SAVE_SPCR>
-#define _PARENT PDQ_GFX<_TEMPLATE_CLASS, ILI9340_TFTWIDTH, ILI9340_TFTHEIGHT>
+#define _PARENT PDQ_GFX<_TEMPLATE_CLASS, coord_t, s_coord_t, ILI9340_TFTWIDTH, ILI9340_TFTHEIGHT>
 _TEMPLATE_DEF
 class PDQ_ILI9340 : public _PARENT {
   public:
     // higher-level routines
     static inline void begin();
-    static void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
-    static void pushColor(uint16_t color);
-    static void pushColor(uint16_t color, int cnt);
+    static void setAddrWindow(coord_t x0, coord_t y0, coord_t x1, coord_t y1);
+    static void pushColor(color_t color);
+    static void pushColor(color_t color, int cnt);
 
     // Pass 8-bit (each) R,G,B, get back 16-bit packed color
-    static constexpr INLINE uint16_t color565(uint8_t r, uint8_t g, uint8_t b) {
+    static constexpr INLINE color_t color565(uint8_t r, uint8_t g, uint8_t b) {
         return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
     }
 
     // required driver primitive methods (all except drawPixel can call generic version in PDQ_GFX with "_" postfix).
-    static void drawPixel(int x, int y, uint16_t color);
-    static void drawFastVLine(int x, int y, int h, uint16_t color);
-    static void drawFastHLine(int x, int y, int w, uint16_t color);
+    static void drawPixel(coord_t x, coord_t y, color_t color);
+    static void drawFastVLine(coord_t x, s_coord_t y, coord_t h, color_t color);
+    static void drawFastHLine(s_coord_t x, coord_t y, coord_t w, color_t color);
     static void setRotation(uint8_t r);
     static void invertDisplay(boolean i);
 
-    static inline void fillScreen(uint16_t color) __attribute__((always_inline)) {
+    static inline void fillScreen(color_t color) __attribute__((always_inline)) {
         _PARENT::fillScreen_(color); // call generic version
     }
 
-    static void drawLine(int x0, int y0, int x1, int y1, uint16_t color);
-    static void fillRect(int x, int y, int w, int h, uint16_t color);
+    static void drawLine(coord_t x0, coord_t y0, coord_t x1, coord_t y1, color_t color);
+    static void fillRect(s_coord_t x, s_coord_t y, coord_t w, coord_t h, color_t color);
 
     // === lower-level internal routines =========
     static void commandList(const uint8_t *addr);
@@ -473,7 +476,7 @@ class PDQ_ILI9340 : public _PARENT {
     }
 
     // internal version that does not spi_begin()/spi_end()
-    static INLINE void setAddrWindow_(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) INLINE_OPT {
+    static INLINE void setAddrWindow_(coord_t x0, coord_t y0, coord_t x1, coord_t y1) INLINE_OPT {
         writeCommand(ILI9340_CASET); // column address set
         spiWrite16(x0);              // XSTART
         spiWrite16_preCmd(x1);       // XEND
@@ -644,7 +647,7 @@ void _TEMPLATE_CLASS::begin(void) {
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
+void _TEMPLATE_CLASS::setAddrWindow(coord_t x0, coord_t y0, coord_t x1, coord_t y1) {
     spi_begin();
 
     setAddrWindow_(x0, y0, x1, y1);
@@ -653,7 +656,7 @@ void _TEMPLATE_CLASS::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint1
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::pushColor(uint16_t color) {
+void _TEMPLATE_CLASS::pushColor(color_t color) {
     spi_begin();
 
     spiWrite16_preCmd(color);
@@ -662,7 +665,7 @@ void _TEMPLATE_CLASS::pushColor(uint16_t color) {
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::pushColor(uint16_t color, int count) {
+void _TEMPLATE_CLASS::pushColor(color_t color, int count) {
     spi_begin();
 
     spiWrite16(color, count);
@@ -671,7 +674,7 @@ void _TEMPLATE_CLASS::pushColor(uint16_t color, int count) {
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::drawPixel(int x, int y, uint16_t color) {
+void _TEMPLATE_CLASS::drawPixel(coord_t x, coord_t y, color_t color) {
     if ((x < 0) || (x >= _PARENT::_width) || (y < 0) || (y >= _PARENT::_height))
         return;
 
@@ -685,7 +688,7 @@ void _TEMPLATE_CLASS::drawPixel(int x, int y, uint16_t color) {
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::drawFastVLine(int x, int y, int h, uint16_t color) {
+void _TEMPLATE_CLASS::drawFastVLine(coord_t x, s_coord_t y, coord_t h, color_t color) {
     // clipping
     if ((x < 0) || (x >= _PARENT::_width) || (y >= _PARENT::_height))
         return;
@@ -695,7 +698,7 @@ void _TEMPLATE_CLASS::drawFastVLine(int x, int y, int h, uint16_t color) {
         y = 0;
     }
 
-    int y1 = y + h;
+    s_coord_t y1 = y + h;
 
     if (y1 < 0)
         return;
@@ -712,7 +715,7 @@ void _TEMPLATE_CLASS::drawFastVLine(int x, int y, int h, uint16_t color) {
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::drawFastHLine(int x, int y, int w, uint16_t color) {
+void _TEMPLATE_CLASS::drawFastHLine(s_coord_t x, coord_t y, coord_t w, color_t color) {
     // clipping
     if ((x >= _PARENT::_width) || (y < 0) || (y >= _PARENT::_height))
         return;
@@ -722,7 +725,7 @@ void _TEMPLATE_CLASS::drawFastHLine(int x, int y, int w, uint16_t color) {
         x = 0;
     }
 
-    int x1 = x + w;
+    s_coord_t x1 = x + w;
 
     if (x1 < 0)
         return;
@@ -739,7 +742,7 @@ void _TEMPLATE_CLASS::drawFastHLine(int x, int y, int w, uint16_t color) {
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::fillRect(int x, int y, int w, int h, uint16_t color) {
+void _TEMPLATE_CLASS::fillRect(s_coord_t x, s_coord_t y, coord_t w, coord_t h, color_t color) {
     // rudimentary clipping (drawChar w/big text requires this)
     if ((x >= _PARENT::_width) || (y >= _PARENT::_height))
         return;
@@ -769,7 +772,7 @@ void _TEMPLATE_CLASS::fillRect(int x, int y, int w, int h, uint16_t color) {
 
 // Bresenham's algorithm - thx Wikipedia
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::drawLine(int x0, int y0, int x1, int y1, uint16_t color) {
+void _TEMPLATE_CLASS::drawLine(coord_t x0, coord_t y0, coord_t x1, coord_t y1, color_t color) {
 #if 0 && defined(__AVR_ATtiny85__) || defined(__AVR_ATtiny45__)
 	drawLine_(x0, y0, x1, y1, color);
 #else
@@ -787,11 +790,11 @@ void _TEMPLATE_CLASS::drawLine(int x0, int y0, int x1, int y1, uint16_t color) {
     if (x1 < 0)
         return;
 
-    int dx, dy;
+    s_coord_t dx, dy;
     dx = x1 - x0;
     dy = abs(y1 - y0);
 
-    int err = dx / 2;
+    s_coord_t err = dx / 2;
     int8_t ystep;
 
     if (y0 < y1) {
@@ -803,7 +806,7 @@ void _TEMPLATE_CLASS::drawLine(int x0, int y0, int x1, int y1, uint16_t color) {
     uint8_t setaddr = 1;
 
 #if 0 && defined(__AVR_ATtiny85__) && !defined(__AVR_ATtiny45__)
-	int	end = steep ? _PARENT::_height-1 : _PARENT::_width-1;
+	coord_t	end = steep ? _PARENT::_height-1 : _PARENT::_width-1;
 	if (x1 > end)
 		x1 = end;
 

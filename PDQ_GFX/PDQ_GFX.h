@@ -338,7 +338,6 @@ const unsigned char glcdfont[] PROGMEM =
 
 #define GFX_FONT_PACKED
 
-typedef int coord_t;      // type used for coordinates (signed) for parameters (int16_t used for storage)
 typedef uint16_t color_t; // type used for colors (unsigned)
 
 // swap any type
@@ -361,8 +360,8 @@ static inline __attribute__((always_inline)) T maxValue(T &x, T &y) {
     return x >= y ? x : y;
 }
 
-#define PARENT_TEMPLATE_PARAMS class HW, coord_t WIDTH, coord_t HEIGHT
-#define PARENT_TEMPLATE_PARAM_NAMES HW, WIDTH, HEIGHT
+#define PARENT_TEMPLATE_PARAMS class HW, class coord_t, class s_coord_t, coord_t WIDTH, coord_t HEIGHT
+#define PARENT_TEMPLATE_PARAM_NAMES HW, coord_t, s_coord_t, WIDTH, HEIGHT
 #define PARENT_TEMPLATE_DEF template <PARENT_TEMPLATE_PARAMS>
 
 PARENT_TEMPLATE_DEF
@@ -383,11 +382,11 @@ class PDQ_GFX : public Print {
     static void fillScreen_(color_t color);
 
     // These are usually overridden in the driver subclass to be useful (but not internally referenced)
-    static void setRotation(uint8_t r);   // only swaps width/height if not supported by driver
-    static void invertDisplay(bool i); // only if supported by driver
+    static void setRotation(uint8_t r); // only swaps width/height if not supported by driver
+    static void invertDisplay(bool i);  // only if supported by driver
 
     // These exist in PDQ_GFX (and generally have no subclass override)
-    static void drawRect(coord_t x, coord_t y, coord_t w, coord_t h, color_t color);
+    static void drawRect(s_coord_t x, s_coord_t y, coord_t w, coord_t h, color_t color);
     static void drawCircle(coord_t x0, coord_t y0, coord_t r, color_t color);
     static void drawCircleHelper(coord_t x0, coord_t y0, coord_t r, uint8_t cornername, color_t color);
     static void fillCircle(coord_t x0, coord_t y0, coord_t r, color_t color);
@@ -496,9 +495,9 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawCircle(coord_t x0, coord_t y0, co
 
 PARENT_TEMPLATE_DEF
 void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawCircleHelper(coord_t x0, coord_t y0, coord_t r, uint8_t cornername, color_t color) {
-    coord_t f = 1 - r;
+    s_coord_t f = 1 - r;
     coord_t ddF_x = 1;
-    coord_t ddF_y = -2 * r;
+    s_coord_t ddF_y = -(r << 1);
     coord_t x = 0;
     coord_t y = r;
 
@@ -511,6 +510,7 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawCircleHelper(coord_t x0, coord_t 
         ++x;
         ddF_x += 2;
         f += ddF_x;
+
         if (cornername & 0x4) {
             HW::drawPixel(x0 + x, y0 + y, color);
             HW::drawPixel(x0 + y, y0 + x, color);
@@ -533,9 +533,9 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawCircleHelper(coord_t x0, coord_t 
 // Used to do circles and roundrects
 PARENT_TEMPLATE_DEF
 void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::fillCircleHelper(coord_t x0, coord_t y0, coord_t r, uint8_t cornername, coord_t delta, color_t color) {
-    coord_t f = 1 - r;
+    s_coord_t f = 1 - r;
     coord_t ddF_x = 1;
-    coord_t ddF_y = -2 * r;
+    s_coord_t ddF_y = -(r << 1);
     coord_t x = 0;
     coord_t y = r;
 
@@ -583,8 +583,8 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawLine_(coord_t x0, coord_t y0, coo
     coord_t dx = x1 - x0;
     coord_t dy = abs(y1 - y0);
 
-    coord_t err = dx / 2;
-    coord_t ystep;
+    s_coord_t err = dx / 2;
+    int8_t ystep;
 
     if (y0 < y1) {
         ystep = 1;
@@ -608,7 +608,7 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawLine_(coord_t x0, coord_t y0, coo
 
 // Draw a rectangle
 PARENT_TEMPLATE_DEF
-void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawRect(coord_t x, coord_t y, coord_t w, coord_t h, color_t color) {
+void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawRect(s_coord_t x, s_coord_t y, coord_t w, coord_t h, color_t color) {
     HW::drawFastHLine(x, y, w, color);
     HW::drawFastHLine(x, y + h - 1, w, color);
     HW::drawFastVLine(x, y, h, color);
@@ -645,26 +645,37 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::fillScreen_(color_t color) {
 PARENT_TEMPLATE_DEF
 void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawRoundRect(coord_t x, coord_t y, coord_t w, coord_t h, coord_t r, color_t color) {
     // smarter version
-    HW::drawFastHLine(x + r, y, w - 2 * r, color);         // Top
-    HW::drawFastHLine(x + r, y + h - 1, w - 2 * r, color); // Bottom
-    HW::drawFastVLine(x, y + r, h - 2 * r, color);         // Left
-    HW::drawFastVLine(x + w - 1, y + r, h - 2 * r, color); // Right
-    // draw four corners
-    drawCircleHelper(x + r, y + r, r, 1, color);
-    drawCircleHelper(x + w - r - 1, y + r, r, 2, color);
-    drawCircleHelper(x + w - r - 1, y + h - r - 1, r, 4, color);
-    drawCircleHelper(x + r, y + h - r - 1, r, 8, color);
+    // draw four round corners + 4 rects to form the round rect
+    const coord_t truncWidth = w - (r << 1);
+    const coord_t truncHeight = h - (r << 1);
+    const coord_t topYoffset = y + r;
+    const coord_t leftXoffset = x + r;
+    HW::drawFastHLine(leftXoffset, y, truncWidth, color); // Top
+    coord_t bottomYoffset = y + h - 1;
+    HW::drawFastHLine(leftXoffset, bottomYoffset, truncWidth, color); // Bottom
+    bottomYoffset -= r;
+    drawCircleHelper(leftXoffset, bottomYoffset, r, 8, color);
+    drawCircleHelper(leftXoffset, topYoffset, r, 1, color);
+    HW::drawFastVLine(x, topYoffset, truncHeight, color); // Left
+    coord_t rightOffset = x + w - 1;
+    HW::drawFastVLine(rightOffset, topYoffset, truncHeight, color); // Right
+    rightOffset -= r;
+    drawCircleHelper(rightOffset, topYoffset, r, 2, color);
+    drawCircleHelper(rightOffset, bottomYoffset, r, 4, color);
 }
 
 // Fill a rounded rectangle
 PARENT_TEMPLATE_DEF
 void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::fillRoundRect(coord_t x, coord_t y, coord_t w, coord_t h, coord_t r, color_t color) {
     // smarter version
-    HW::fillRect(x + r, y, w - 2 * r, h, color);
+    const coord_t leftXoffset = x + r;
+    HW::fillRect(leftXoffset, y, w - (r << 1), h, color);
 
     // draw four corners
-    fillCircleHelper(x + w - r - 1, y + r, r, 1, h - 2 * r - 1, color);
-    fillCircleHelper(x + r, y + r, r, 2, h - 2 * r - 1, color);
+    const coord_t delta = h - (r << 1) - 1;
+    const coord_t topYoffset = y + r;
+    fillCircleHelper(leftXoffset, topYoffset, r, 2, delta, color);
+    fillCircleHelper(x + w - r - 1, topYoffset, r, 1, delta, color);
 }
 
 // Draw a triangle
@@ -678,7 +689,6 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawTriangle(coord_t x0, coord_t y0, 
 // Fill a triangle
 PARENT_TEMPLATE_DEF
 void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::fillTriangle(coord_t x0, coord_t y0, coord_t x1, coord_t y1, coord_t x2, coord_t y2, color_t color) {
-    coord_t a, b, y, last;
 
     // Sort coordinates by Y order (y2 >= y1 >= y0)
     if (y0 > y1) {
@@ -696,27 +706,33 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::fillTriangle(coord_t x0, coord_t y0, 
 
     // Handle awkward all-on-same-line case as its own thing
     if (y0 == y2) {
-        a = b = x0;
-        if (x1 < a)
+        coord_t a = x0;
+        coord_t b = x0;
+        if (x1 < a) {
             a = x1;
-        else if (x1 > b)
+        } else {
             b = x1;
-        if (x2 < a)
+        }
+
+        if (x2 < a) {
             a = x2;
-        else if (x2 > b)
+        }else if (x2 > b) {
             b = x2;
+        }
         HW::drawFastHLine(a, y0, b - a + 1, color);
         return;
     }
 
-    coord_t dx01 = x1 - x0;
-    coord_t dy01 = y1 - y0;
-    coord_t dx02 = x2 - x0;
-    coord_t dy02 = y2 - y0;
-    coord_t dx12 = x2 - x1;
-    coord_t dy12 = y2 - y1;
-    int32_t sa = 0;
-    int32_t sb = 0;
+    const s_coord_t dx01 = x1 - x0;
+    const s_coord_t dx02 = x2 - x0;
+    const s_coord_t dx12 = x2 - x1;
+    const coord_t dy01 = y1 - y0;
+    const coord_t dy02 = y2 - y0;
+    const coord_t dy12 = y2 - y1;
+    //TODO for ST7735 this is enough for bigger displays you might need 32 bit instead of 16
+    // you need space for the highest possible value: width*height
+    s_coord_t sa = 0;
+    s_coord_t sb = 0;
 
     // For upper part of triangle, find scanline crossings for segments
     // 0-1 and 0-2.	If y1=y2 (flat-bottomed triangle), the scanline y1
@@ -724,34 +740,35 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::fillTriangle(coord_t x0, coord_t y0, 
     // error there), otherwise scanline y1 is skipped here and handled
     // in the second loop...which also avoids a /0 error here if y0=y1
     // (flat-topped triangle).
-    if (y1 == y2)
-        last = y1; // Include y1 scanline
-    else
-        last = y1 - 1; // Skip it
+    coord_t last = y1;
+    // Check if we need to include y1 scanline
+    if (y1 != y2) {
+        last -= 1; // Skip it
+    }
 
-    for (y = y0; y <= last; ++y) {
-        a = x0 + sa / dy01;
-        b = x0 + sb / dy02;
-        sa += dx01;
-        sb += dx02;
+    coord_t y = y0;
+    for (; y <= last; ++y) {
+        s_coord_t a = sa / dy01;
+        s_coord_t b = sb / dy02;
         /* longhand:
 		a = x0 + (x1 - x0) * (y - y0) / (y1 - y0);
 		b = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
 		*/
         if (a > b)
             swapValue(a, b);
-        HW::drawFastHLine(a, y, b - a + 1, color);
+        HW::drawFastHLine(a + x0, y, b - a + 1, color);
+
+        sa += dx01;
+        sb += dx02;
     }
 
     // For lower part of triangle, find scanline crossings for segments
     // 0-2 and 1-2.	This loop is skipped if y1=y2.
-    sa = dx12 * (y - y1);
+    sa = y1 != y2 ? 0 : dx12;
     sb = dx02 * (y - y0);
     for (; y <= y2; ++y) {
-        a = x1 + sa / dy12;
-        b = x0 + sb / dy02;
-        sa += dx12;
-        sb += dx02;
+        coord_t a = x1 + sa / dy12;
+        coord_t b = x0 + sb / dy02;
         /* longhand:
 		a = x1 + (x2 - x1) * (y - y1) / (y2 - y1);
 		b = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
@@ -759,6 +776,9 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::fillTriangle(coord_t x0, coord_t y0, 
         if (a > b)
             swapValue(a, b);
         HW::drawFastHLine(a, y, b - a + 1, color);
+
+        sa += dx12;
+        sb += dx02;
     }
 }
 
@@ -1033,7 +1053,7 @@ void PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::initButton(PDQ_GFX<PARENT_TEM
 
 PARENT_TEMPLATE_DEF
 void PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::drawButton(bool inverted) {
-    uint16_t fill, outline, text;
+    color_t fill, outline, text;
 
     if (!inverted) {
         fill = _fillcolor;

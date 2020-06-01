@@ -358,28 +358,30 @@ static INLINE INLINE_OPT void spiWrite16(uint16_t data, int count) {
 // May the compiler remove optimize it away if unused x.x
 static volatile uint8_t save_SPCR; // initial SPCR value/saved SPCR value (swapped in spi_begin/spi_end)
 
+typedef uint8_t coord_t;
+typedef int16_t s_coord_t;
+
 #define _TEMPLATE_DEF template <ST7735_Chipset ST7735_CHIPSET, uint8_t ST7735_CS_PIN, uint8_t ST7735_DC_PIN, uint8_t ST7735_RST_PIN, bool ST7735_SAVE_SPCR>
 
 #define _TEMPLATE_CLASS PDQ_ST7735<ST7735_CHIPSET, ST7735_CS_PIN, ST7735_DC_PIN, ST7735_RST_PIN, ST7735_SAVE_SPCR>
-#define _PARENT PDQ_GFX<_TEMPLATE_CLASS, ST7735_TFTWIDTH, ST7735_TFTHEIGHT_18>
-_TEMPLATE_DEF
-class PDQ_ST7735 : public _PARENT {
+#define _PARENT PDQ_GFX<_TEMPLATE_CLASS, coord_t, s_coord_t, ST7735_TFTWIDTH, ST7735_TFTHEIGHT_18>
+_TEMPLATE_DEF class PDQ_ST7735 : public _PARENT {
   public:
     // higher-level routines
     static void inline begin();
 
-    static void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h);
-    static void pushColor(uint16_t color);
-    static void pushColor(uint16_t color, int count);
+    static void setAddrWindow(coord_t x0, coord_t y0, coord_t w, coord_t h);
+    static void pushColor(color_t color);
+    static void pushColor(color_t color, int count);
 
     // required driver primitive methods (all except drawPixel can call generic version in PDQ_GFX with "_" postfix).
-    static void drawPixel(int x, int y, uint16_t color);
-    static void drawFastVLine(int x, int y, int h, uint16_t color);
-    static void drawFastHLine(int x, int y, int w, uint16_t color);
+    static void drawPixel(coord_t x, coord_t y, color_t color);
+    static void drawFastVLine(coord_t x, s_coord_t y, coord_t h, color_t color);
+    static void drawFastHLine(s_coord_t x, coord_t y, coord_t w, color_t color);
     static void setRotation(uint8_t r);
     static void invertDisplay(bool i);
 
-    static void fillScreen(uint16_t color) {
+    static void fillScreen(color_t color) {
         spi_begin();
 
         setAddrWindow_(0, 0, _PARENT::_width - 1, _PARENT::_height - 1);
@@ -389,11 +391,11 @@ class PDQ_ST7735 : public _PARENT {
         spi_end();
     }
 
-    static void drawLine(int x0, int y0, int x1, int y1, uint16_t color);
-    static void fillRect(int x, int y, int w, int h, uint16_t color);
+    static void drawLine(coord_t x0, coord_t y0, coord_t x1, coord_t y1, color_t color);
+    static void fillRect(s_coord_t x, s_coord_t y, coord_t w, coord_t h, color_t color);
 
     // Pass 8-bit (each) R,G,B, get back 16-bit packed color
-    static constexpr INLINE uint16_t color565(uint8_t r, uint8_t g, uint8_t b) {
+    static constexpr INLINE color_t color565(uint8_t r, uint8_t g, uint8_t b) {
         return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
     }
 
@@ -433,7 +435,7 @@ class PDQ_ST7735 : public _PARENT {
     }
 
     // internal version that does not spi_begin()/spi_end()
-    static INLINE void setAddrWindow_(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) INLINE_OPT {
+    static INLINE void setAddrWindow_(coord_t x0, coord_t y0, coord_t x1, coord_t y1) INLINE_OPT {
         writeCommand(ST7735_CASET);      // column address set
         spiWrite16(x0 + _xstart);        // XSTART
         spiWrite16_preCmd(x1 + _xstart); // XEND
@@ -729,7 +731,7 @@ void _TEMPLATE_CLASS::begin() {
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h) {
+void _TEMPLATE_CLASS::setAddrWindow(coord_t x0, coord_t y0, coord_t w, coord_t h) {
     spi_begin();
 
     setAddrWindow_(x0, y0, x0 + w - 1, y0 + h - 1);
@@ -738,7 +740,7 @@ void _TEMPLATE_CLASS::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t w, uint16
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::pushColor(uint16_t color) {
+void _TEMPLATE_CLASS::pushColor(color_t color) {
     spi_begin();
 
     spiWrite16_preCmd(color);
@@ -747,7 +749,7 @@ void _TEMPLATE_CLASS::pushColor(uint16_t color) {
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::pushColor(uint16_t color, int count) {
+void _TEMPLATE_CLASS::pushColor(color_t color, int count) {
     spi_begin();
 
     spiWrite16(color, count);
@@ -757,7 +759,7 @@ void _TEMPLATE_CLASS::pushColor(uint16_t color, int count) {
 
 // required driver primitive methods (all except drawPixel can call generic version in PDQ_GFX with "_" postfix).
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::drawPixel(int x, int y, uint16_t color) {
+void _TEMPLATE_CLASS::drawPixel(coord_t x, coord_t y, color_t color) {
     if ((x < 0) || (x >= _PARENT::_width) || (y < 0) || (y >= _PARENT::_height))
         return;
 
@@ -771,12 +773,12 @@ void _TEMPLATE_CLASS::drawPixel(int x, int y, uint16_t color) {
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::drawFastVLine(int x, int y, int h, uint16_t color) {
+void _TEMPLATE_CLASS::drawFastVLine(coord_t x, s_coord_t y, coord_t h, color_t color) {
     // clipping
     if ((x < 0) || (x >= _PARENT::_width) || (y >= _PARENT::_height))
         return;
 
-    int y1 = y + h - 1;
+    s_coord_t y1 = y + h - 1;
 
     if (y1 < 0)
         return;
@@ -802,12 +804,12 @@ void _TEMPLATE_CLASS::drawFastVLine(int x, int y, int h, uint16_t color) {
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::drawFastHLine(int x, int y, int w, uint16_t color) {
+void _TEMPLATE_CLASS::drawFastHLine(s_coord_t x, coord_t y, coord_t w, color_t color) {
     // clipping
     if ((x >= _PARENT::_width) || (y < 0) || (y >= _PARENT::_height))
         return;
 
-    int x1 = x + w - 1;
+    s_coord_t x1 = x + w - 1;
 
     if (x1 < 0)
         return;
@@ -912,9 +914,9 @@ void _TEMPLATE_CLASS::invertDisplay(bool i) {
 
 // Bresenham's algorithm - thx Wikipedia
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::drawLine(int x0, int y0, int x1, int y1, uint16_t color) {
-    coord_t dx = x1 - x0;
-    coord_t dy = y1 - y0;
+void _TEMPLATE_CLASS::drawLine(coord_t x0, coord_t y0, coord_t x1, coord_t y1, color_t color) {
+    s_coord_t dx = x1 - x0;
+    s_coord_t dy = y1 - y0;
     bool steep = abs(dy) > abs(dx);
     coord_t yBorder;
     if (steep) {
@@ -946,7 +948,7 @@ void _TEMPLATE_CLASS::drawLine(int x0, int y0, int x1, int y1, uint16_t color) {
     }
 
     // dx and dy are now always positive
-    coord_t err = dx >> 1;
+    s_coord_t err = dx >> 1;
 
     spi_begin();
 
@@ -970,6 +972,8 @@ before_loop:
             goto before_loop;
         } else {
             __asm__ __volatile__(
+            //TODO update timing calculation (uint8_t has probably some where less cycles...) therefore additional 2 cycle nop is needed
+                "	adiw	r24,0\n" // +2 (2-cycle NOP)
                 "	adiw	r24,0\n" // +2 (2-cycle NOP)
                 "	nop\n"           // +1 (1-cycle NOP)
                 :
@@ -984,22 +988,13 @@ before_loop:
 }
 
 _TEMPLATE_DEF
-void _TEMPLATE_CLASS::fillRect(int x, int y, int w, int h, uint16_t color) {
+void _TEMPLATE_CLASS::fillRect(s_coord_t x, s_coord_t y, coord_t w, coord_t h, color_t color) {
     // rudimentary clipping (drawChar w/big text requires this)
     if ((x >= _PARENT::_width) || (y >= _PARENT::_height))
         return;
 
-    if (w < 0) {    // If negative width...
-        x += w + 1; //   Move X to left edge
-        w = -w;     //   Use positive width
-    }
-    if (h < 0) {    // If negative height...
-        y += h + 1; //   Move Y to top edge
-        h = -h;     //   Use positive height
-    }
-
-    int x2 = x + w - 1;
-    int y2 = y + h - 1;
+    s_coord_t x2 = x + w - 1;
+    s_coord_t y2 = y + h - 1;
 
     if (x2 < 0 || y2 < 0) {
         return;
@@ -1040,14 +1035,13 @@ void _TEMPLATE_CLASS::fillRect(int x, int y, int w, int h, uint16_t color) {
 _TEMPLATE_DEF
 void _TEMPLATE_CLASS::commandList(const uint8_t *addr) {
     uint8_t numCommands, numArgs;
-    uint16_t ms;
 
     numCommands = pgm_read_byte(addr++); // Number of commands to follow
                                          // For each command...
     while (numCommands--) {
         writeCommand(pgm_read_byte(addr++)); // Read, issue command
         numArgs = pgm_read_byte(addr++);     // Number of args to follow
-        ms = numArgs & DELAY;                // If hibit set, delay follows args
+        uint8_t ms = numArgs & DELAY;        // If hibit set, delay follows args
         numArgs &= ~DELAY;                   // Mask out delay bit
         // For each argument...
         while (numArgs--) {
@@ -1055,10 +1049,10 @@ void _TEMPLATE_CLASS::commandList(const uint8_t *addr) {
         }
 
         if (ms) {
-            ms = pgm_read_byte(addr++); // Read post-command delay time (ms)
-            if (ms == 255)
-                ms = 500; // If 255, delay for 500 ms
-            delay(ms);
+            uint16_t delayMs = pgm_read_byte(addr++); // Read post-command delay time (ms)
+            if (delayMs == 255)
+                delayMs = 500; // If 255, delay for 500 ms
+            delay(delayMs);
         }
     }
 }
