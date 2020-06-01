@@ -883,13 +883,13 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawChar(coord_t x, coord_t y, unsign
                 if (isTextSize1) {
                     HW::drawPixel(x, j, color);
                 } else {
-                    HW::fillRect(x, y, textsize, textsize, color);
+                    HW::fillRect(x, j, textsize, textsize, color);
                 }
             } else if (is_opaque) {
                 if (isTextSize1) {
                     HW::drawPixel(x, j, bg);
                 } else {
-                    HW::fillRect(x, y, textsize, textsize, bg);
+                    HW::fillRect(x, j, textsize, textsize, bg);
                 }
             }
             line >>= 1;
