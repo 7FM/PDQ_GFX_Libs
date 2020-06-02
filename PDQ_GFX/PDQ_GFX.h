@@ -59,6 +59,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "Arduino.h"
 #include "Print.h"
 
+#define X_PIXEL_PER_CHAR 6
+#define Y_PIXEL_PER_CHAR 8
+
 #ifndef pgm_read_byte
 #define pgm_read_byte(addr) (*(const unsigned char *)(addr))
 #endif
@@ -412,7 +415,7 @@ class PDQ_GFX : public Print {
     static inline uint8_t getRotation() __attribute__((always_inline)) { return rotation; }
     static inline coord_t getCursorX() __attribute__((always_inline)) { return cursor_x; }
     static inline coord_t getCursorY() __attribute__((always_inline)) { return cursor_y; }
-    static inline void getTextBounds(char *__restrict__ string, coord_t x, coord_t y, int16_t *__restrict__ x1, int16_t *__restrict__ y1, uint16_t *__restrict__ w, uint16_t *__restrict__ h);
+    static inline void getTextBounds(const char *__restrict__ string, coord_t x, coord_t y, int16_t *__restrict__ x1, int16_t *__restrict__ y1, uint16_t *__restrict__ w, uint16_t *__restrict__ h);
     static inline void getTextBounds(const __FlashStringHelper *__restrict__ s, coord_t x, coord_t y, int16_t *__restrict__ x1, int16_t *__restrict__ y1, uint16_t *__restrict__ w, uint16_t *__restrict__ h);
 
     virtual size_t write(uint8_t); // used by Arduino "Print.h" (and the one required virtual function)
@@ -857,13 +860,13 @@ size_t PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::write(uint8_t c) {
     // 'Classic' built-in font
     if (c == '\n') {
         cursor_x = 0;
-        cursor_y += (coord_t)textsize * 8;
+        cursor_y += (coord_t)textsize * Y_PIXEL_PER_CHAR;
     } else if (c != '\r') {
         HW::drawChar(cursor_x, cursor_y, c, textcolor, textbgcolor);
-        cursor_x += textsize * 6;
-        if (wrap && (cursor_x > (_width - textsize * 6))) {
+        cursor_x += textsize * X_PIXEL_PER_CHAR;
+        if (wrap && (cursor_x > (_width - textsize * X_PIXEL_PER_CHAR))) {
             cursor_x = 0;
-            cursor_y += textsize * 8;
+            cursor_y += textsize * Y_PIXEL_PER_CHAR;
         }
     }
     return 1;
@@ -874,8 +877,8 @@ PARENT_TEMPLATE_DEF
 void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawChar(coord_t x, coord_t y, unsigned char c, color_t color, color_t bg) {
     if ((x >= _width) ||
         (y >= _height) ||
-        ((x + (6 * textsize) - 1) < 0) ||
-        ((y + (8 * textsize) - 1) < 0)) {
+        ((x + (X_PIXEL_PER_CHAR * textsize) - 1) < 0) ||
+        ((y + (Y_PIXEL_PER_CHAR * textsize) - 1) < 0)) {
         return;
     }
 
@@ -890,7 +893,7 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::drawChar(coord_t x, coord_t y, unsign
     const bool isTextSize1 = textsize == 1;
 
     const coord_t endIt = y + (textsize << 3);
-    for (uint8_t i = 0; i < 6; ++i, x += textsize) {
+    for (uint8_t i = 0; i < X_PIXEL_PER_CHAR; ++i, x += textsize) {
         uint8_t line;
 
         if (i == 5)
@@ -982,23 +985,23 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::generalGetTextBounds(uint8_t (*strRea
             // Not a carriage return, is normal char
             if (c != '\r') {
                 // Includes interchar x gap
-                lineWidth += textsize * 6;
+                lineWidth += textsize * X_PIXEL_PER_CHAR;
                 //TODO check which one is correct... progmem version has different condition:
-                // if (wrap && ((x + textsize * 6) >= _width)) {
-                if (wrap && (cursor_x > (_width - textsize * 6))) {
+                // if (wrap && ((x + textsize * X_PIXEL_PER_CHAR) >= _width)) {
+                if (wrap && (cursor_x > (_width - textsize * X_PIXEL_PER_CHAR))) {
                     x = 0;
-                    y += textsize * 8;
+                    y += textsize * Y_PIXEL_PER_CHAR;
                     // Save widest line
                     if (lineWidth > maxWidth) {
                         maxWidth = lineWidth;
                     }
-                    lineWidth = textsize * 6; // First char on new line
+                    lineWidth = textsize * X_PIXEL_PER_CHAR; // First char on new line
                 }
             } // Carriage return = do nothing
         } else {
             // Newline
             x = 0;             // Reset x to 0
-            y += textsize * 8; // Advance y by 1 line
+            y += textsize * Y_PIXEL_PER_CHAR; // Advance y by 1 line
             // Save widest line
             if (lineWidth > maxWidth) {
                 maxWidth = lineWidth;
@@ -1009,7 +1012,7 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::generalGetTextBounds(uint8_t (*strRea
     // End of string
     // Add height of last (or only) line
     if (lineWidth) {
-        y += textsize * 8;
+        y += textsize * Y_PIXEL_PER_CHAR;
     }
     *w = maxWidth - 1; // Don't include last interchar x gap
     *h = y - *y1;
@@ -1017,14 +1020,14 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::generalGetTextBounds(uint8_t (*strRea
 
 // Pass string and a cursor position, returns UL corner and W,H.
 PARENT_TEMPLATE_DEF
-void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::getTextBounds(char *str, coord_t x, coord_t y, int16_t *__restrict__ x1, int16_t *__restrict__ y1, uint16_t *__restrict__ w, uint16_t *__restrict__ h) {
-    generalGetTextBounds(normalMemReader, (uint8_t *)str, x, y, x1, y1, w, h);
+void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::getTextBounds(const char *str, coord_t x, coord_t y, int16_t *__restrict__ x1, int16_t *__restrict__ y1, uint16_t *__restrict__ w, uint16_t *__restrict__ h) {
+    generalGetTextBounds(normalMemReader, (const uint8_t *)str, x, y, x1, y1, w, h);
 }
 
 // Same as above, but for PROGMEM strings
 PARENT_TEMPLATE_DEF
 void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::getTextBounds(const __FlashStringHelper *str, coord_t x, coord_t y, int16_t *__restrict__ x1, int16_t *__restrict__ y1, uint16_t *__restrict__ w, uint16_t *__restrict__ h) {
-    generalGetTextBounds(progmemReader, (uint8_t *)str, x, y, x1, y1, w, h);
+    generalGetTextBounds(progmemReader, (const uint8_t *)str, x, y, x1, y1, w, h);
 }
 
 PARENT_TEMPLATE_DEF

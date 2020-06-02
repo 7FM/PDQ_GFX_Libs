@@ -972,7 +972,7 @@ before_loop:
             goto before_loop;
         } else {
             __asm__ __volatile__(
-            //TODO update timing calculation (uint8_t has probably some where less cycles...) therefore additional 2 cycle nop is needed
+            //TODO update timing calculation (uint8_t has probably somewhere less cycles...) therefore additional 2 cycle nop is needed
                 "	adiw	r24,0\n" // +2 (2-cycle NOP)
                 "	adiw	r24,0\n" // +2 (2-cycle NOP)
                 "	nop\n"           // +1 (1-cycle NOP)
@@ -980,7 +980,7 @@ before_loop:
                 :
                 :);
             // +2 cycles for jump back
-            // = 17 cycles (the other way around with goto before loop is uncritically)
+            // = 17 cycles (the other way around with goto before_loop is uncritically)
         }
     }
 
