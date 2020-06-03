@@ -66,7 +66,7 @@ as well as Adafruit raw 1.8" TFT display
 
 #define NOINLINE_NAKED_USED __attribute__((noinline)) __attribute__((naked)) __attribute__((used))
 
-typedef enum {
+typedef enum : uint8_t {
     ST7735_INITB = 0,                                // 1.8" (128x160) ST7735B chipset (only one type)
     ST7735_INITR_GREENTAB = 1,                       // 1.8" (128x160) ST7735R chipset with green tab (same as ST7735_INITR_18GREENTAB)
     ST7735_INITR_REDTAB = 2,                         // 1.8" (128x160) ST7735R chipset with red tab (same as ST7735_INITR_18REDTAB)
@@ -85,7 +85,7 @@ typedef enum {
 //          If this is the case you will need a voltage level-converter (e.g., HC4050, divider circuit etc.).
 
 // Color definitions
-typedef enum {
+typedef enum : color_t{
     ST7735_BLACK = 0x0000,
     ST7735_BLUE = 0x001F,
     ST7735_RED = 0xF800,
@@ -98,7 +98,7 @@ typedef enum {
 
 // ST7735 commands (read commands omitted)
 // For datasheet see https://www.adafruit.com/products/358
-typedef enum {
+typedef enum : uint8_t {
     ST7735_NOP = 0x00,
     ST7735_SWRESET = 0x01,
 
@@ -138,7 +138,7 @@ typedef enum {
 } ST7735_Command;
 
 // some other misc. constants
-enum {
+enum : uint8_t {
     // screen dimensions
     ST7735_TFTWIDTH = 128,
     ST7735_TFTHEIGHT_144 = 128, // 1.44" display

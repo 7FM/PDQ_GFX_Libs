@@ -62,7 +62,7 @@
 #endif
 
 // Color definitions
-enum {
+enum : color_t {
     ILI9341_BLACK = 0x0000,
     ILI9341_BLUE = 0x001F,
     ILI9341_RED = 0xF800,
@@ -75,7 +75,7 @@ enum {
 
 // ILI9341 commands
 // For datasheet see https://www.adafruit.com/products/1480
-typedef enum {
+typedef enum : uint8_t {
     ILI9341_NOP = 0x00,
     ILI9341_SWRESET = 0x01,
     ILI9341_RDDID = 0x04,

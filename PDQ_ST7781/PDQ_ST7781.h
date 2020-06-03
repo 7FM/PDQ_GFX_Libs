@@ -70,7 +70,7 @@ Also requires the Adafruit_GFX library for Arduino. https://github.com/adafruit/
 #endif
 
 // Color definitions
-enum {
+enum : color_t{
     ST7781_BLACK = 0x0000,
     ST7781_BLUE = 0x001F,
     ST7781_RED = 0xF800,
@@ -83,7 +83,7 @@ enum {
 
 // ST7781 commands
 // For datasheet see http://garden.seeedstudio.com/images/4/4e/ST7781R_datasheet.pdf
-typedef enum {
+typedef enum : uint8_t {
     ST7781_DRIVERRD = 0x00,
     ST7781_DRIVROPC = 0x01,
     ST7781_DRIVRWVC = 0x02,
