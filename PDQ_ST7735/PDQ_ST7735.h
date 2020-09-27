@@ -85,7 +85,7 @@ typedef enum : uint8_t {
 //          If this is the case you will need a voltage level-converter (e.g., HC4050, divider circuit etc.).
 
 // Color definitions
-typedef enum : color_t{
+typedef enum : color_t {
     ST7735_BLACK = 0x0000,
     ST7735_BLUE = 0x001F,
     ST7735_RED = 0xF800,
@@ -357,15 +357,17 @@ static INLINE INLINE_OPT void spiWrite16(uint16_t data, int count) {
 // Ugly... I know but it works and you cant have more than one display either with this library
 // May the compiler remove optimize it away if unused x.x
 static volatile uint8_t save_SPCR; // initial SPCR value/saved SPCR value (swapped in spi_begin/spi_end)
+static volatile uint8_t save_SPSR; // initial SPSR value/saved SPSR value (swapped in spi_begin/spi_end)
 
 typedef uint8_t coord_t;
 typedef int16_t s_coord_t;
 
-#define _TEMPLATE_DEF template <ST7735_Chipset ST7735_CHIPSET, uint8_t ST7735_CS_PIN, uint8_t ST7735_DC_PIN, uint8_t ST7735_RST_PIN, bool ST7735_SAVE_SPCR>
+#define _TEMPLATE_CLASS_DEF template <ST7735_Chipset ST7735_CHIPSET, uint8_t ST7735_CS_PIN, uint8_t ST7735_DC_PIN, uint8_t ST7735_RST_PIN, bool ST7735_SAVE_SPI_SETTINGS, bool ST7735_RESTORE_PREV_SPI_SETTINGS = false>
+#define _TEMPLATE_DEF template <ST7735_Chipset ST7735_CHIPSET, uint8_t ST7735_CS_PIN, uint8_t ST7735_DC_PIN, uint8_t ST7735_RST_PIN, bool ST7735_SAVE_SPI_SETTINGS, bool ST7735_RESTORE_PREV_SPI_SETTINGS>
 
-#define _TEMPLATE_CLASS PDQ_ST7735<ST7735_CHIPSET, ST7735_CS_PIN, ST7735_DC_PIN, ST7735_RST_PIN, ST7735_SAVE_SPCR>
+#define _TEMPLATE_CLASS PDQ_ST7735<ST7735_CHIPSET, ST7735_CS_PIN, ST7735_DC_PIN, ST7735_RST_PIN, ST7735_SAVE_SPI_SETTINGS, ST7735_RESTORE_PREV_SPI_SETTINGS>
 #define _PARENT PDQ_GFX<_TEMPLATE_CLASS, coord_t, s_coord_t, ST7735_TFTWIDTH, ST7735_TFTHEIGHT_18>
-_TEMPLATE_DEF class PDQ_ST7735 : public _PARENT {
+_TEMPLATE_CLASS_DEF class PDQ_ST7735 : public _PARENT {
   public:
     // higher-level routines
     static void inline begin();
@@ -407,8 +409,16 @@ _TEMPLATE_DEF class PDQ_ST7735 : public _PARENT {
     // set CS back to low (LCD selected)
     static INLINE void spi_begin() INLINE_OPT {
 
-        if (ST7735_SAVE_SPCR) {
-            swapValue(save_SPCR, SPCR); // swap initial/current SPCR settings
+        if (ST7735_SAVE_SPI_SETTINGS) {
+            if (ST7735_RESTORE_PREV_SPI_SETTINGS) {
+                swapValue(save_SPCR, SPCR); // swap initial/current SPCR settings
+                uint8_t tmp = SPSR;
+                SPSR = save_SPSR & 0x1;
+                save_SPSR = tmp; // swap initial/current SPSR settings
+            } else {
+                SPCR = save_SPCR;
+                SPSR = save_SPSR & 0x1; // SPI2x mask
+            }
         }
         FastPin<ST7735_CS_PIN>::lo(); // CS <= LOW (selected)
     }
@@ -417,8 +427,11 @@ _TEMPLATE_DEF class PDQ_ST7735 : public _PARENT {
     // reset CS back to high (LCD unselected)
     static INLINE void spi_end() INLINE_OPT {
         FastPin<ST7735_CS_PIN>::hi(); // CS <= HIGH (deselected)
-        if (ST7735_SAVE_SPCR) {
+        if (ST7735_SAVE_SPI_SETTINGS && ST7735_RESTORE_PREV_SPI_SETTINGS) {
             swapValue(SPCR, save_SPCR); // swap current/initial SPCR settings
+            uint8_t tmp = SPSR;
+            SPSR = save_SPSR & 0x1;
+            save_SPSR = tmp; // swap initial/current SPSR settings
         }
     }
 
@@ -491,8 +504,10 @@ void _TEMPLATE_CLASS::begin() {
     }
 
     uint8_t oldSPCR;
-    if (ST7735_SAVE_SPCR) {
+    uint8_t oldSPSR;
+    if (ST7735_SAVE_SPI_SETTINGS && ST7735_RESTORE_PREV_SPI_SETTINGS) {
         oldSPCR = SPCR; // save current SPCR settings
+        oldSPSR = SPSR;
     }
 
     SPI.begin();
@@ -500,9 +515,13 @@ void _TEMPLATE_CLASS::begin() {
     SPI.setDataMode(SPI_MODE0);
     SPI.setClockDivider(SPI_CLOCK_DIV2); // 8 MHz (full! speed!) [1 byte every 18 cycles]
 
-    if (ST7735_SAVE_SPCR) {
+    if (ST7735_SAVE_SPI_SETTINGS) {
         save_SPCR = SPCR; // save new initial SPCR settings
-        SPCR = oldSPCR;   // restore previous SPCR settings (spi_begin/spi_end will switch between the two)
+        save_SPSR = SPSR; // save new initial SPSR settings
+        if (ST7735_RESTORE_PREV_SPI_SETTINGS) {
+            SPCR = oldSPCR;       // restore previous SPCR settings (spi_begin/spi_end will switch between the two)
+            SPSR = oldSPSR & 0x1; // restore previous SPSR settings (spi_begin/spi_end will switch between the two)
+        }
     }
     spi_begin();
 
@@ -972,7 +991,7 @@ before_loop:
             goto before_loop;
         } else {
             __asm__ __volatile__(
-            //TODO update timing calculation (uint8_t has probably somewhere less cycles...) therefore additional 2 cycle nop is needed
+                //TODO update timing calculation (uint8_t has probably somewhere less cycles...) therefore additional 2 cycle nop is needed
                 "	adiw	r24,0\n" // +2 (2-cycle NOP)
                 "	adiw	r24,0\n" // +2 (2-cycle NOP)
                 "	nop\n"           // +1 (1-cycle NOP)
