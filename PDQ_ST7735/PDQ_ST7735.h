@@ -1076,4 +1076,12 @@ void _TEMPLATE_CLASS::commandList(const uint8_t *addr) {
     }
 }
 
+#undef INLINE
+#undef INLINE_OPT
+#undef NOINLINE_NAKED_USED
+#undef _TEMPLATE_CLASS_DEF
+#undef _TEMPLATE_CLASS
+#undef _TEMPLATE_DEF
+#undef _PARENT
+
 #endif // !defined(_PDQ_ST7735H_)

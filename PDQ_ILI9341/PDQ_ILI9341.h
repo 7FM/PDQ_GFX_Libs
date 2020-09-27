@@ -987,4 +987,12 @@ void _TEMPLATE_CLASS::invertDisplay(boolean i) {
     spi_end();
 }
 
+#undef INLINE
+#undef INLINE_OPT
+#undef NOINLINE_NAKED_USED
+// #undef _TEMPLATE_CLASS_DEF
+#undef _TEMPLATE_DEF
+#undef _TEMPLATE_CLASS
+#undef _PARENT
+
 #endif // !defined(_PDQ_ILI9341H_)

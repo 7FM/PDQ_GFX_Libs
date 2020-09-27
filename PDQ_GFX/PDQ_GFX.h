@@ -339,8 +339,6 @@ const unsigned char glcdfont[] PROGMEM =
         0x00, 0x00, 0x00, 0x00, 0x00 // #255 NBSP
 };
 
-#define GFX_FONT_PACKED
-
 typedef uint16_t color_t; // type used for colors (unsigned)
 
 // swap any type
@@ -1106,5 +1104,9 @@ PARENT_TEMPLATE_DEF
 bool PDQ_GFX_Button_<PARENT_TEMPLATE_PARAM_NAMES>::justReleased() {
     return (!currstate && laststate);
 }
+
+#undef PARENT_TEMPLATE_PARAMS
+#undef PARENT_TEMPLATE_PARAM_NAMES
+#undef PARENT_TEMPLATE_DEF
 
 #endif // _PDQ_GFX_H
