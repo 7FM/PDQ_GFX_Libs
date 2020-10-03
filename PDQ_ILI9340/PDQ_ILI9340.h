@@ -423,16 +423,26 @@ static inline void delay17() {}
 // Ugly... I know but it works and you cant have more than one display either with this library
 // May the compiler remove optimize it away if unused x.x
 static volatile uint8_t save_SPCR; // initial SPCR value/saved SPCR value (swapped in spi_begin/spi_end)
+static volatile uint8_t save_SPSR; // initial SPSR value/saved SPSR value (swapped in spi_begin/spi_end)
 #endif
 
 typedef uint16_t coord_t;
 typedef int16_t s_coord_t;
 
-#define _TEMPLATE_DEF template <uint8_t ILI9340_CS_PIN, uint8_t ILI9340_DC_PIN, uint8_t ILI9340_RST_PIN, bool ILI9340_SAVE_SPCR>
+#if defined(AVR_HARDWARE_SPI)
+#define _TEMPLATE_CLASS_DEF template <uint8_t ILI9340_CS_PIN, uint8_t ILI9340_DC_PIN, uint8_t ILI9340_RST_PIN, bool ILI9340_SAVE_SPI_SETTINGS, bool ILI9340_RESTORE_PREV_SPI_SETTINGS = false>
+#define _TEMPLATE_DEF template <uint8_t ILI9340_CS_PIN, uint8_t ILI9340_DC_PIN, uint8_t ILI9340_RST_PIN, bool ILI9340_SAVE_SPI_SETTINGS, bool ILI9340_RESTORE_PREV_SPI_SETTINGS>
 
-#define _TEMPLATE_CLASS PDQ_ILI9340<ILI9340_CS_PIN, ILI9340_DC_PIN, ILI9340_RST_PIN, ILI9340_SAVE_SPCR>
+#define _TEMPLATE_CLASS PDQ_ILI9340<ILI9340_CS_PIN, ILI9340_DC_PIN, ILI9340_RST_PIN, ILI9340_SAVE_SPI_SETTINGS, ILI9340_RESTORE_PREV_SPI_SETTINGS>
+#else
+#define _TEMPLATE_CLASS_DEF template <uint8_t ILI9340_CS_PIN, uint8_t ILI9340_DC_PIN, uint8_t ILI9340_RST_PIN>
+#define _TEMPLATE_DEF template <uint8_t ILI9340_CS_PIN, uint8_t ILI9340_DC_PIN, uint8_t ILI9340_RST_PIN>
+
+#define _TEMPLATE_CLASS PDQ_ILI9340<ILI9340_CS_PIN, ILI9340_DC_PIN, ILI9340_RST_PIN>
+#endif
+
 #define _PARENT PDQ_GFX<_TEMPLATE_CLASS, coord_t, s_coord_t, ILI9340_TFTWIDTH, ILI9340_TFTHEIGHT>
-_TEMPLATE_DEF
+_TEMPLATE_CLASS_DEF
 class PDQ_ILI9340 : public _PARENT {
   public:
     // higher-level routines
@@ -490,8 +500,17 @@ class PDQ_ILI9340 : public _PARENT {
     // set CS back to low (LCD selected)
     static inline void spi_begin() __attribute__((always_inline)) {
 #if defined(AVR_HARDWARE_SPI)
-        if (ILI9340_SAVE_SPCR)
-            swapValue(save_SPCR, SPCR); // swap initial/current SPCR settings
+        if (ILI9340_SAVE_SPI_SETTINGS) {
+            if (ILI9340_RESTORE_PREV_SPI_SETTINGS) {
+                swapValue(save_SPCR, SPCR); // swap initial/current SPCR settings
+                uint8_t tmp = SPSR;
+                SPSR = save_SPSR & 0x1;
+                save_SPSR = tmp; // swap initial/current SPSR settings
+            } else {
+                SPCR = save_SPCR;
+                SPSR = save_SPSR & 0x1; // SPI2x mask
+            }
+        }
 #endif
         FastPin<ILI9340_CS_PIN>::lo(); // CS <= LOW (selected)
     }
@@ -501,8 +520,12 @@ class PDQ_ILI9340 : public _PARENT {
     static inline void spi_end() __attribute__((always_inline)) {
         FastPin<ILI9340_CS_PIN>::hi(); // CS <= HIGH (deselected)
 #if defined(AVR_HARDWARE_SPI)
-        if (ILI9340_SAVE_SPCR)
+        if (ILI9340_SAVE_SPI_SETTINGS && ILI9340_RESTORE_PREV_SPI_SETTINGS) {
             swapValue(SPCR, save_SPCR); // swap current/initial SPCR settings
+            uint8_t tmp = SPSR;
+            SPSR = save_SPSR & 0x1;
+            save_SPSR = tmp; // swap initial/current SPSR settings
+        }
 #endif
     }
 
@@ -576,8 +599,12 @@ void _TEMPLATE_CLASS::begin(void) {
 
 #if defined(AVR_HARDWARE_SPI)
     uint8_t oldSPCR;
-    if (ILI9340_SAVE_SPCR)
-        oldSPCR = SPCR; // save initial SPCR settingsW
+    uint8_t oldSPSR;
+    if (ILI9340_SAVE_SPI_SETTINGS && ILI9340_RESTORE_PREV_SPI_SETTINGS) {
+        oldSPCR = SPCR; // save current SPCR settings
+        oldSPSR = SPSR;
+    }
+
     SPI.begin();
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
@@ -585,9 +612,13 @@ void _TEMPLATE_CLASS::begin(void) {
 #endif
 
 #if defined(AVR_HARDWARE_SPI)
-    if (ILI9340_SAVE_SPCR) {
-        save_SPCR = SPCR; // save SPCR settings
-        SPCR = oldSPCR;   // restore previous SPCR settings (spi_begin/spi_end will switch between the two)
+    if (ILI9340_SAVE_SPI_SETTINGS) {
+        save_SPCR = SPCR; // save new initial SPCR settings
+        save_SPSR = SPSR; // save new initial SPSR settings
+        if (ILI9340_RESTORE_PREV_SPI_SETTINGS) {
+            SPCR = oldSPCR;       // restore previous SPCR settings (spi_begin/spi_end will switch between the two)
+            SPSR = oldSPSR & 0x1; // restore previous SPSR settings (spi_begin/spi_end will switch between the two)
+        }
     }
 #endif
     spi_begin();
@@ -993,8 +1024,7 @@ void _TEMPLATE_CLASS::invertDisplay(boolean i) {
 
 #undef INLINE
 #undef INLINE_OPT
-#undef NOINLINE_NAKED_USED
-// #undef _TEMPLATE_CLASS_DEF
+#undef _TEMPLATE_CLASS_DEF
 #undef _TEMPLATE_CLASS
 #undef _TEMPLATE_DEF
 #undef _PARENT

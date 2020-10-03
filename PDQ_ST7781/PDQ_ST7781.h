@@ -792,4 +792,10 @@ void _TEMPLATE_CLASS::setRotation(uint8_t m) {
     lcd_end();
 }
 
+#undef INLINE
+#undef INLINE_OPT
+#undef _TEMPLATE_CLASS
+#undef _TEMPLATE_DEF
+#undef _PARENT
+
 #endif // !defined(_PDQ_ST7781H_)
