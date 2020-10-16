@@ -717,7 +717,7 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::fillTriangle(coord_t x0, coord_t y0, 
 
         if (x2 < a) {
             a = x2;
-        }else if (x2 > b) {
+        } else if (x2 > b) {
             b = x2;
         }
         HW::drawFastHLine(a, y0, b - a + 1, color);
@@ -998,7 +998,7 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::generalGetTextBounds(uint8_t (*strRea
             } // Carriage return = do nothing
         } else {
             // Newline
-            x = 0;             // Reset x to 0
+            x = 0;                            // Reset x to 0
             y += textsize * Y_PIXEL_PER_CHAR; // Advance y by 1 line
             // Save widest line
             if (lineWidth > maxWidth) {
@@ -1011,6 +1011,10 @@ void PDQ_GFX<PARENT_TEMPLATE_PARAM_NAMES>::generalGetTextBounds(uint8_t (*strRea
     // Add height of last (or only) line
     if (lineWidth) {
         y += textsize * Y_PIXEL_PER_CHAR;
+    }
+    // Save widest line
+    if (lineWidth > maxWidth) {
+        maxWidth = lineWidth;
     }
     *w = maxWidth - 1; // Don't include last interchar x gap
     *h = y - *y1;
